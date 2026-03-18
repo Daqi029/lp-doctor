@@ -26,6 +26,14 @@ const PROCESS_LOGS = [
   "score.compute -> finalize conversion risk",
 ];
 
+function normalizeInputUrl(raw: string): string {
+  const value = raw.trim();
+  if (!value) return "";
+  if (value.startsWith("//")) return `https:${value}`;
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(value)) return value;
+  return `https://${value}`;
+}
+
 function scoreTone(score: number): { text: string; bg: string; ring: string } {
   if (score < 60) return { text: "text-[#b42828]", bg: "bg-[#fde9e9]", ring: "ring-[#e9b1b1]" };
   if (score < 80) return { text: "text-[#9a6a07]", bg: "bg-[#fff5dd]", ring: "ring-[#edd7a6]" };
@@ -65,10 +73,12 @@ export default function Home() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!state.inputUrl.trim()) {
+    const normalizedUrl = normalizeInputUrl(state.inputUrl);
+    if (!normalizedUrl) {
       setState((prev) => ({ ...prev, error: "请先输入有效的 Landing Page 链接" }));
       return;
     }
+    setState((prev) => ({ ...prev, inputUrl: normalizedUrl }));
 
     setState((prev) => ({
       ...prev,
@@ -86,7 +96,7 @@ export default function Home() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: state.inputUrl.trim() }),
+        body: JSON.stringify({ url: normalizedUrl }),
       });
 
       const data = (await response.json()) as AnalyzeResponse;
@@ -130,7 +140,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          url: state.inputUrl.trim(),
+          url: normalizeInputUrl(state.inputUrl),
           score: state.result.score,
           percentile: state.result.percentile,
           industry: state.result.industry,
@@ -161,7 +171,6 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <a className="rounded-full border border-[#c7d1ea] px-3 py-1 text-[#3e4d73] hover:bg-[#ebf1ff]" href="https://quaily.com/overseas" target="_blank" rel="noreferrer">我的专栏</a>
               <a className="rounded-full border border-[#c7d1ea] px-3 py-1 text-[#3e4d73] hover:bg-[#ebf1ff]" href="https://mengqi.cc" target="_blank" rel="noreferrer">咨询网站</a>
-              <a className="rounded-full border border-[#c7d1ea] px-3 py-1 text-[#3e4d73] hover:bg-[#ebf1ff]" href="https://x.com/daqi029" target="_blank" rel="noreferrer">@daqi029</a>
             </div>
           </div>
 
@@ -176,6 +185,12 @@ export default function Home() {
             <input
               value={state.inputUrl}
               onChange={(e) => setState((prev) => ({ ...prev, inputUrl: e.target.value }))}
+              onBlur={() =>
+                setState((prev) => ({
+                  ...prev,
+                  inputUrl: normalizeInputUrl(prev.inputUrl),
+                }))
+              }
               placeholder="https://your-landing-page.com"
               className="h-13 rounded-2xl border border-[#c8d2eb] bg-white px-4 text-sm outline-none transition focus:border-[#6075a7] focus:ring-3 focus:ring-[#dce6ff]"
             />
@@ -192,6 +207,15 @@ export default function Home() {
             <span>{state.quotaText}</span>
             <span>已被 50+ 独立开发者 / 创业者使用和验证</span>
           </div>
+          <p className="mt-2 text-sm text-[#5a6b92]">
+            由增长设计顾问
+            {" "}
+            <a className="font-semibold text-[#244783] underline decoration-[#9eb4e6] underline-offset-3" href="https://x.com/daqi029" target="_blank" rel="noreferrer">
+              大琪
+            </a>
+            {" "}
+            打造，曾帮助多个 SaaS 产品显著提升注册转化率
+          </p>
 
           {state.error ? (
             <p className="mt-4 rounded-xl border border-[#d58b8b] bg-[#fff5f5] px-4 py-3 text-sm text-[#a33b3b]">{state.error}</p>
@@ -261,7 +285,7 @@ export default function Home() {
             <div className="mt-5 grid gap-3 md:grid-cols-3">
               <a className="rounded-xl border border-[#d7b3b3] bg-white px-4 py-3 text-sm text-[#623232]" href="https://quaily.com/overseas" target="_blank" rel="noreferrer">专栏：quaily.com/overseas</a>
               <a className="rounded-xl border border-[#d7b3b3] bg-white px-4 py-3 text-sm text-[#623232]" href="https://mengqi.cc" target="_blank" rel="noreferrer">咨询网站：mengqi.cc</a>
-              <a className="rounded-xl border border-[#d7b3b3] bg-white px-4 py-3 text-sm text-[#623232]" href="https://x.com/daqi029" target="_blank" rel="noreferrer">推特：@daqi029</a>
+              <a className="rounded-xl border border-[#d7b3b3] bg-white px-4 py-3 text-sm text-[#623232]" href="https://x.com/daqi029" target="_blank" rel="noreferrer">推特主页：x.com/daqi029</a>
             </div>
             <div className="mt-5 flex flex-col gap-4 rounded-2xl border border-[#d8b2b2] bg-white/80 p-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">

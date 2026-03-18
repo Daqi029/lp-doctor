@@ -3,7 +3,13 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { AnalyzeResult, LeadPayload } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+function resolveDataDir(): string {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.NODE_ENV === "production") return path.join("/tmp", "lp-doctor-data");
+  return path.join(process.cwd(), "data");
+}
+
+const DATA_DIR = resolveDataDir();
 const STORE_FILE = path.join(DATA_DIR, "store.json");
 
 type CachedEntry = {
@@ -44,7 +50,16 @@ export function makeUserKey(ip: string, userAgent: string, anonId: string): stri
 }
 
 export function normalizeUrl(input: string): string {
-  const url = new URL(input.trim());
+  const raw = input.trim();
+  if (!raw) {
+    throw new Error("empty url");
+  }
+  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw);
+  const normalizedInput = raw.startsWith("//") ? `https:${raw}` : hasProtocol ? raw : `https://${raw}`;
+  const url = new URL(normalizedInput);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("invalid protocol");
+  }
   return `${url.origin}${url.pathname}`.replace(/\/$/, "");
 }
 
