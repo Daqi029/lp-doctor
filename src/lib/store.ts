@@ -44,9 +44,7 @@ export function makeUserKey(ip: string, userAgent: string, anonId: string): stri
 }
 
 export function normalizeUrl(input: string): string {
-  const raw = input.trim();
-  const withProtocol = /^[a-zA-Z][a-zA-Z\\d+\\-.]*:\/\//.test(raw) ? raw : `https://${raw}`;
-  const url = new URL(withProtocol);
+  const url = new URL(input.trim());
   return `${url.origin}${url.pathname}`.replace(/\/$/, "");
 }
 
