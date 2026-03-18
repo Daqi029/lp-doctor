@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { track } from "@vercel/analytics";
 import type { AnalyzeResponse, AnalyzeResult } from "@/lib/types";
 
 type State = {
@@ -78,6 +79,7 @@ export default function Home() {
       setState((prev) => ({ ...prev, error: "请先输入有效的 Landing Page 链接" }));
       return;
     }
+    track("submit_url", { url: normalizedUrl });
     setState((prev) => ({ ...prev, inputUrl: normalizedUrl }));
 
     setState((prev) => ({
@@ -127,6 +129,12 @@ export default function Home() {
           ? `今日已用 ${data.quota.used}/${data.quota.limit} 次（剩余 ${data.quota.remaining} 次）`
           : prev.quotaText,
       }));
+      track("result_generated", {
+        url: normalizedUrl,
+        score: data.result.score,
+        percentile: data.result.percentile,
+        industry: data.result.industry,
+      });
     } catch {
       setState((prev) => ({ ...prev, loading: false, error: "网络异常，请稍后重试" }));
     }
@@ -134,6 +142,11 @@ export default function Home() {
 
   async function handleLeadClick() {
     if (!state.result) return;
+    track("click_contact", {
+      url: normalizeInputUrl(state.inputUrl),
+      score: state.result.score,
+      percentile: state.result.percentile,
+    });
 
     try {
       await fetch("/api/lead", {
@@ -196,6 +209,7 @@ export default function Home() {
             />
             <button
               type="submit"
+              onClick={() => track("click_start_diagnosis")}
               disabled={state.loading}
               className="h-13 rounded-2xl bg-[#1f355f] px-6 text-sm font-medium text-[#edf3ff] transition hover:bg-[#162745] disabled:cursor-not-allowed disabled:opacity-65"
             >
@@ -295,7 +309,13 @@ export default function Home() {
                   <p className="mt-1 text-xs text-[#764646]">添加时备注“LP诊断”，我会优先查看。</p>
                 </div>
               </div>
-              <a href="https://mengqi.cc" target="_blank" rel="noreferrer" className="rounded-xl bg-[#6d2f2f] px-5 py-3 text-sm font-medium text-[#fff2f2] transition hover:bg-[#4f2121]">
+              <a
+                href="https://mengqi.cc"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => track("click_contact", { source: "quota_exceeded" })}
+                className="rounded-xl bg-[#6d2f2f] px-5 py-3 text-sm font-medium text-[#fff2f2] transition hover:bg-[#4f2121]"
+              >
                 立即联系我，申请人工深度诊断
               </a>
             </div>
