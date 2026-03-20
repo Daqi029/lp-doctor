@@ -1,4 +1,5 @@
 import type { AnalyzeResult, Suggestion } from "./types";
+import growthKnowledgeBase from "./growth_knowledge_base.json";
 
 type PageSignals = {
   title: string;
@@ -13,6 +14,14 @@ type PageSignals = {
   hasFaq: boolean;
   ctaCount: number;
   heroLen: number;
+};
+
+type GrowthBlock = {
+  id: string;
+  name: string;
+  principle: string;
+  commonIssues: string[];
+  diagnosticSignals: string[];
 };
 
 const SAAS_HINTS = [
@@ -40,6 +49,13 @@ const SAAS_HINTS = [
 
 const ECOM_HINTS = ["add to cart", "buy now", "shop", "checkout", "cart", "立即购买", "加入购物车"];
 const INFO_HINTS = ["course", "newsletter", "教程", "订阅", "课程", "社群"];
+const GENERIC_HERO_WORDS = ["ai", "platform", "solution", "next-gen", "智能平台", "解决方案", "一体化"];
+const FLOW_WORDS = ["step", "流程", "第一步", "第二步", "开始后", "onboarding", "how it works", "3 steps", "三步"];
+const OUTCOME_WORDS = ["提升", "增长", "转化", "结果", "ROI", "before", "after", "效率", "节省"];
+const FEATURE_WORDS = ["feature", "功能", "模块", "集成", "integration", "dashboard", "api"];
+const POSITIONING_WORDS = ["framework", "方法论", "独家", "proprietary", "专为", "only", "category"];
+const RISK_REVERSE_WORDS = ["guarantee", "退款", "无风险", "cancel anytime", "满意"];
+const growthBlocks: GrowthBlock[] = growthKnowledgeBase.blocks;
 
 function stripHtml(html: string): string {
   return html
@@ -60,6 +76,31 @@ function extractArray(html: string, tag: string): string[] {
     match = regex.exec(html);
   }
   return items;
+}
+
+function extractAttr(tag: string, attr: string): string | null {
+  const regex = new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+  const match = tag.match(regex);
+  return match?.[1] || null;
+}
+
+function extractPreviewImage(html: string, pageUrl: string): string | null {
+  const metaRegex = /<meta\s+[^>]*>/gi;
+  let match: RegExpExecArray | null = metaRegex.exec(html);
+  while (match) {
+    const tag = match[0];
+    const property = (extractAttr(tag, "property") || extractAttr(tag, "name") || "").toLowerCase();
+    const content = extractAttr(tag, "content");
+    if (content && (property === "og:image" || property === "twitter:image")) {
+      try {
+        return new URL(content, pageUrl).toString();
+      } catch {
+        return null;
+      }
+    }
+    match = metaRegex.exec(html);
+  }
+  return null;
 }
 
 function detectIndustry(text: string): AnalyzeResult["industry"] {
@@ -108,7 +149,153 @@ function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
-function buildSuggestions(
+function containsAny(text: string, terms: string[]): boolean {
+  const lower = text.toLowerCase();
+  return terms.some((term) => lower.includes(term.toLowerCase()));
+}
+
+function countMatches(text: string, terms: string[]): number {
+  const lower = text.toLowerCase();
+  return terms.reduce((sum, term) => sum + (lower.includes(term.toLowerCase()) ? 1 : 0), 0);
+}
+
+function buildGrowthSuggestions(
+  signals: PageSignals,
+  dimensions: AnalyzeResult["dimensions"],
+): Suggestion[] {
+  const text = `${signals.h1} ${signals.title} ${signals.text}`;
+  const ctaPreview = signals.primaryCtas.length > 0 ? signals.primaryCtas.join(" / ") : "未识别到明确行动按钮文案";
+  const headlinePreview = signals.h1 || signals.headings[0] || signals.title || "未识别到明确首屏标题";
+  const featureDensity = countMatches(text, FEATURE_WORDS);
+  const outcomeDensity = countMatches(text, OUTCOME_WORDS);
+  const candidates: Array<Suggestion & { score: number }> = [];
+
+  const blockById = (id: string) => growthBlocks.find((block) => block.id === id);
+
+  if (dimensions.valueProp < 72 || containsAny(headlinePreview, GENERIC_HERO_WORDS)) {
+    const block = blockById("value_clarity_first");
+    if (block) {
+      candidates.push({
+        title: "用户没看懂你能带来什么结果",
+        issue: "首屏没有同时回答“为谁、解决什么、带来什么结果”，用户很难在 3 秒内建立相关性。",
+        impact: "用户会在首屏快速流失，后续内容再完整也难以弥补第一印象损失。",
+        action: "将首屏改写为“帮助[目标用户]在[场景/周期]获得[可量化结果]”，并让首个 CTA 与该结果一一对应。",
+        evidence: `首屏文案：“${headlinePreview}”；CTA：“${ctaPreview}”`,
+        priority: "high",
+        score: 100 - dimensions.valueProp,
+      });
+    }
+  }
+
+  if (dimensions.structure < 70 || signals.primaryCtas.length >= 3 || signals.headings.length > 12) {
+    const block = blockById("reduce_cognitive_load");
+    if (block) {
+      candidates.push({
+        title: "信息太多，用户不知道先做什么",
+        issue: "页面在同一视图内承载太多信息或并列动作，用户需要额外思考才能决定下一步。",
+        impact: "理解成本上升会显著压低 CTA 点击率，尤其是冷启动流量。",
+        action: "每一屏只保留一个主信息与一个主 CTA，其余信息降级到下一屏；用视觉层级强化阅读路径。",
+        evidence: `标题层级数 ${signals.headings.length}；主 CTA 数 ${signals.primaryCtas.length}`,
+        priority: "high",
+        score: 100 - dimensions.structure,
+      });
+    }
+  }
+
+  if (dimensions.cta < 72 || !containsAny(text, FLOW_WORDS)) {
+    const block = blockById("activation_path_visible");
+    if (block) {
+      candidates.push({
+        title: "看完后，不知道点击后会发生什么",
+        issue: "CTA 触发后的步骤与交付形式没有被清晰说明，用户不知道点击后会发生什么。",
+        impact: "高意向用户会因为不确定性停留在“再看看”，导致关键动作损失。",
+        action: "在 CTA 附近补一段“点击后 1-2-3 步会发生什么”，明确交付内容、时间与预期结果。",
+        evidence: `CTA：“${ctaPreview}”；流程说明命中：${containsAny(text, FLOW_WORDS) ? "有" : "无"}`,
+        priority: "high",
+        score: 100 - dimensions.cta,
+      });
+    }
+  }
+
+  if (dimensions.copy < 72 || featureDensity > outcomeDensity + 1) {
+    const block = blockById("outcome_over_feature");
+    if (block) {
+      candidates.push({
+        title: "讲了功能，但用户看不到收益",
+        issue: "页面强调功能与组件，但对“改完后能得到什么增长结果”描述不足。",
+        impact: "用户能理解产品，却无法想象收益，转化意愿会停在中段。",
+        action: "每个核心功能后补一个结果句（before/after 或增长指标），把“功能描述”转换成“结果画面”。",
+        evidence: `功能词命中 ${featureDensity}；结果词命中 ${outcomeDensity}`,
+        priority: "high",
+        score: 100 - dimensions.copy,
+      });
+    }
+  }
+
+  if (dimensions.trust < 72 || (!signals.hasTestimonial && !signals.hasLogoWall) || !containsAny(text, RISK_REVERSE_WORDS)) {
+    const block = blockById("trust_acceleration");
+    if (block) {
+      candidates.push({
+        title: "信任不足，用户不敢马上行动",
+        issue: "页面缺少真实案例、可量化成果或风险反转机制，用户难以快速建立信任。",
+        impact: "决策速度下降，用户更容易推迟行动或转向竞品比较。",
+        action: "补 2-3 条可验证案例（含前后指标）+ 明确交付物 + 风险反转承诺（如可取消/试用保障）。",
+        evidence: `案例/评价：${signals.hasTestimonial ? "有" : "无"}；客户背书：${signals.hasLogoWall ? "有" : "无"}`,
+        priority: "high",
+        score: 100 - dimensions.trust,
+      });
+    }
+  }
+
+  if (signals.primaryCtas.length >= 3 || signals.buttons.length > 20) {
+    const block = blockById("friction_kill");
+    if (block) {
+      candidates.push({
+        title: "选项太多，用户不知道先点哪里",
+        issue: "页面提供过多路径或按钮，用户需要额外判断“我该点哪一个”。",
+        impact: "每多一个选择都会抬升流失，尤其在移动端更明显。",
+        action: "压缩为“一个主 CTA + 一个次 CTA”，并减少跳转与输入步骤，让用户更快进入激活动作。",
+        evidence: `页面按钮总数 ${signals.buttons.length}；主 CTA 数 ${signals.primaryCtas.length}`,
+        priority: "high",
+        score: 60 + signals.primaryCtas.length * 4,
+      });
+    }
+  }
+
+  if (dimensions.copy < 75 && !containsAny(text, POSITIONING_WORDS)) {
+    const block = blockById("positioning_density");
+    if (block) {
+      candidates.push({
+        title: "看完后，用户不清楚为什么选你",
+        issue: "页面没有快速建立“你属于哪个类别、为什么比替代方案更值得选”。",
+        impact: "用户即使感兴趣，也容易陷入同质化比较，降低转化确定性。",
+        action: "补充方法论/框架名、独特视角和竞争差异一句话，建立 category + authority 的第一印象。",
+        evidence: `定位关键词命中：${containsAny(text, POSITIONING_WORDS) ? "有" : "无"}；文案维度分 ${dimensions.copy}`,
+        priority: "high",
+        score: 100 - dimensions.copy,
+      });
+    }
+  }
+
+  const deduped = new Map<string, Suggestion & { score: number }>();
+  for (const item of candidates) {
+    if (!deduped.has(item.title)) deduped.set(item.title, item);
+  }
+
+  return [...deduped.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((item) => ({
+      title: item.title,
+      issue: item.issue,
+      impact: item.impact,
+      action: item.action,
+      evidence: item.evidence,
+      priority: item.priority,
+    }));
+}
+
+function buildFallbackSuggestions(
   signals: PageSignals,
   dimensions: AnalyzeResult["dimensions"],
 ): Suggestion[] {
@@ -178,7 +365,7 @@ function buildSuggestions(
     }
   }
 
-  return list.slice(0, 3);
+  return list.slice(0, 5);
 }
 
 export async function analyzeLandingPage(url: string): Promise<AnalyzeResult> {
@@ -198,6 +385,7 @@ export async function analyzeLandingPage(url: string): Promise<AnalyzeResult> {
 
   const html = await response.text();
   const signals = toSignals(html);
+  const previewImage = extractPreviewImage(html, url);
   const industry = detectIndustry(`${signals.title} ${signals.text}`);
 
   const valueProp = clampScore(
@@ -233,13 +421,23 @@ export async function analyzeLandingPage(url: string): Promise<AnalyzeResult> {
       : `你的页面有基本转化框架，但在${industry}类页面中仍有明显优化空间，尤其是关键说服节点。`;
 
   const dimensions = { valueProp, structure, cta, trust, copy };
+  const growthSuggestions = buildGrowthSuggestions(signals, dimensions);
+  const fallbackSuggestions = buildFallbackSuggestions(signals, dimensions);
+  const suggestions = [...growthSuggestions];
+  for (const suggestion of fallbackSuggestions) {
+    if (suggestions.length >= 3) break;
+    if (!suggestions.some((item) => item.title === suggestion.title)) {
+      suggestions.push(suggestion);
+    }
+  }
 
   return {
     score,
     percentile,
     industry,
     summary,
-    suggestions: buildSuggestions(signals, dimensions),
+    previewImage,
+    suggestions,
     dimensions,
     source: "fresh",
   };

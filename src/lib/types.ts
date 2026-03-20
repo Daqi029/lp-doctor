@@ -12,6 +12,7 @@ export type AnalyzeResult = {
   percentile: number;
   industry: "SaaS" | "Ecommerce" | "Info" | "General";
   summary: string;
+  previewImage?: string | null;
   suggestions: Suggestion[];
   dimensions: {
     valueProp: number;

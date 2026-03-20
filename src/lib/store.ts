@@ -166,3 +166,8 @@ export async function getDailySummary(date?: string): Promise<{
 
   return { date: target, analyzeUsers, leads };
 }
+
+export async function resetStore(): Promise<void> {
+  await ensureStore();
+  await writeStore(DEFAULT_STORE);
+}

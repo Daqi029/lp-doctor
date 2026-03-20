@@ -1,0 +1,54 @@
+{
+  "version": "v1",
+  "blocks": [
+    {
+      "id": "value_clarity_first",
+      "name": "Value Clarity First",
+      "principle": "用户进入页面 3 秒内必须知道产品是做什么、为谁做、带来什么结果。",
+      "commonIssues": ["slogan 抽象", "用功能代替结果", "ICP 不清晰"],
+      "diagnosticSignals": ["Hero 出现 AI/platform/solution 等空词", "无明确用户场景", "CTA 与价值无直接关联"]
+    },
+    {
+      "id": "reduce_cognitive_load",
+      "name": "Reduce Cognitive Load",
+      "principle": "用户不是来理解你，而是来快速做决定。",
+      "commonIssues": ["信息层级弱", "每屏承载多个核心信息", "视觉路径不清晰"],
+      "diagnosticSignals": ["首屏信息密度过高", "多 CTA 并列", "价值点 scattered"]
+    },
+    {
+      "id": "activation_path_visible",
+      "name": "Activation Path Must Be Visible",
+      "principle": "好的增长产品必须让用户立刻看到下一步是什么。",
+      "commonIssues": ["步骤不清", "交付形式不清", "成果节奏不清"],
+      "diagnosticSignals": ["CTA 模糊", "无流程解释", "用户不知道点击后发生什么"]
+    },
+    {
+      "id": "outcome_over_feature",
+      "name": "Outcome > Feature",
+      "principle": "转化发生在用户看到未来，而不是理解产品。",
+      "commonIssues": ["功能列表堆砌", "缺少增长 impact", "没有用户成功画面"],
+      "diagnosticSignals": ["功能列表过长", "无增长 impact", "没有用户成功画面"]
+    },
+    {
+      "id": "trust_acceleration",
+      "name": "Trust Acceleration",
+      "principle": "决策速度 = 信任密度。",
+      "commonIssues": ["无社会证明", "无真实案例", "无风险反转"],
+      "diagnosticSignals": ["无真实用户", "无可量化成果", "无 guarantee"]
+    },
+    {
+      "id": "friction_kill",
+      "name": "Conversion Friction",
+      "principle": "每多一步，流失上升。",
+      "commonIssues": ["跳转过多", "输入过多", "选择过多"],
+      "diagnosticSignals": ["CTA 需要思考", "表单过长", "多路径 funnel"]
+    },
+    {
+      "id": "positioning_density",
+      "name": "Positioning Density",
+      "principle": "强 LP 会快速建立 category + authority。",
+      "commonIssues": ["差异化不清", "方法论缺失", "权威感弱"],
+      "diagnosticSignals": ["看完不知道为什么选你", "无 framework", "无 personal leverage"]
+    }
+  ]
+}
