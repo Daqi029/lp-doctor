@@ -1,0 +1,206 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+type SubmissionRow = {
+  createdAt: string;
+  url: string;
+  score: number | null;
+  industry: string | null;
+  downloadedReport: boolean;
+  copiedWechat: boolean;
+};
+
+type SummaryPayload = {
+  date: string;
+  overview: {
+    visitors: number;
+    submitUrl: number;
+    resultGenerated: number;
+    downloadReport: number;
+    copyWechat: number;
+    quotaExceeded: number;
+  };
+  funnel: {
+    label: string;
+    count: number;
+    rateFromPrev: number | null;
+  }[];
+  analyzeUsers: number;
+  submissions: SubmissionRow[];
+};
+
+const tabs = [
+  { id: "data", label: "数据" },
+  { id: "funnel", label: "图形漏斗" },
+] as const;
+
+export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("data");
+  const [data, setData] = useState<SummaryPayload | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetch("/api/daily-summary");
+        const payload = (await response.json()) as { ok: boolean; data?: SummaryPayload };
+        if (!response.ok || !payload.ok || !payload.data) {
+          setError("加载看板失败");
+          return;
+        }
+        setData(payload.data);
+      } catch {
+        setError("加载看板失败");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, []);
+
+  const maxFunnelCount = useMemo(() => Math.max(...(data?.funnel.map((item) => item.count) || [1])), [data]);
+
+  return (
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#e8eefc_0%,_#f4f6fb_35%,_#f3f2ee_78%)] px-6 py-10 text-[#1a1a1a]">
+      <div className="mx-auto max-w-6xl">
+        <section className="rounded-3xl border border-[#d6d9e6] bg-[#f8faff]/95 p-7 shadow-[0_28px_70px_rgba(45,73,131,0.09)] md:p-10">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">内部数据看板</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#1d2f56]">Landing Page 增长诊断 Dashboard</h1>
+              <p className="mt-2 text-sm text-[#5b6f99]">
+                {data ? `统计日期：${data.date}` : "加载今日数据中..."}
+              </p>
+            </div>
+            <div className="inline-flex rounded-2xl border border-[#d7dff0] bg-white p-1">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    activeTab === tab.id ? "bg-[#1f355f] text-white" : "text-[#506187] hover:bg-[#eef3ff]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? <p className="mt-8 text-sm text-[#5b6f99]">正在加载今日数据...</p> : null}
+          {error ? <p className="mt-8 rounded-xl border border-[#d58b8b] bg-[#fff5f5] px-4 py-3 text-sm text-[#a33b3b]">{error}</p> : null}
+
+          {!loading && data && activeTab === "data" ? (
+            <div className="mt-8 space-y-8">
+              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+                <MetricCard label="今日访问" value={data.overview.visitors} />
+                <MetricCard label="提交 URL" value={data.overview.submitUrl} />
+                <MetricCard label="生成结果" value={data.overview.resultGenerated} />
+                <MetricCard label="下载报告" value={data.overview.downloadReport} />
+                <MetricCard label="复制微信" value={data.overview.copyWechat} />
+                <MetricCard label="额度用完" value={data.overview.quotaExceeded} />
+              </div>
+
+              <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-[#1d4684]">今日线索列表</h2>
+                  <p className="text-xs text-[#6b7a9d]">共 {data.submissions.length} 条提交</p>
+                </div>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="text-[#5b6f99]">
+                      <tr className="border-b border-[#e5eaf6]">
+                        <th className="px-3 py-3 font-medium">时间</th>
+                        <th className="px-3 py-3 font-medium">URL</th>
+                        <th className="px-3 py-3 font-medium">分数</th>
+                        <th className="px-3 py-3 font-medium">行业</th>
+                        <th className="px-3 py-3 font-medium">下载报告</th>
+                        <th className="px-3 py-3 font-medium">复制微信</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.submissions.map((row) => (
+                        <tr key={`${row.createdAt}-${row.url}`} className="border-b border-[#eef2fb] align-top text-[#2b3856]">
+                          <td className="px-3 py-3 whitespace-nowrap">{new Date(row.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</td>
+                          <td className="max-w-[360px] px-3 py-3">
+                            <div className="truncate" title={row.url}>{row.url}</div>
+                          </td>
+                          <td className="px-3 py-3">{row.score ?? "-"}</td>
+                          <td className="px-3 py-3">{row.industry ?? "-"}</td>
+                          <td className="px-3 py-3">{row.downloadedReport ? "是" : "否"}</td>
+                          <td className="px-3 py-3">{row.copiedWechat ? "是" : "否"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {data.submissions.length === 0 ? <p className="px-3 py-6 text-sm text-[#6b7a9d]">今天还没有提交数据。</p> : null}
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {!loading && data && activeTab === "funnel" ? (
+            <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
+                <h2 className="text-lg font-semibold text-[#1d4684]">图形漏斗</h2>
+                <div className="mt-5 space-y-4">
+                  {data.funnel.map((item) => (
+                    <div key={item.label}>
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[#2b3856]">{item.label}</p>
+                        <p className="text-sm text-[#5b6f99]">
+                          {item.count}
+                          {item.rateFromPrev !== null ? ` · ${item.rateFromPrev}%` : ""}
+                        </p>
+                      </div>
+                      <div className="h-4 overflow-hidden rounded-full bg-[#edf2ff]">
+                        <div
+                          className="h-full rounded-full bg-[linear-gradient(90deg,#1f6a3b_0%,#56ba77_100%)]"
+                          style={{ width: `${Math.max(10, Math.round((item.count / maxFunnelCount) * 100))}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
+                <h2 className="text-lg font-semibold text-[#1d4684]">漏斗诊断</h2>
+                <div className="mt-5 space-y-3">
+                  {data.funnel.slice(1).map((item, index) => {
+                    const prev = data.funnel[index];
+                    const weak = item.rateFromPrev !== null && item.rateFromPrev < 40;
+                    return (
+                      <div key={item.label} className={`rounded-xl border px-4 py-3 ${weak ? "border-[#f0b2b2] bg-[#fff5f5]" : "border-[#dfe6f6] bg-[#f8fbff]"}`}>
+                        <p className={`text-sm font-semibold ${weak ? "text-[#b42828]" : "text-[#2c446e]"}`}>
+                          {prev.label} {"->"} {item.label}
+                        </p>
+                        <p className="mt-1 text-sm text-[#5b6f99]">
+                          当前转化率 {item.rateFromPrev ?? 0}%。
+                          {weak ? " 这一层明显偏细，优先检查结果说服力和 CTA 引导。" : " 这一层暂时没有明显异常。"}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-[#d7dff0] bg-white p-4">
+      <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">{label}</p>
+      <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{value}</p>
+    </div>
+  );
+}

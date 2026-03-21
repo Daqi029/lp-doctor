@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createLead, makeUserKey } from "@/lib/store";
+import { createLead, makeUserKey, recordEvent } from "@/lib/store";
 import { notifyFeishuLead } from "@/lib/notify";
 import type { LeadPayload } from "@/lib/types";
 
@@ -36,6 +36,13 @@ export async function POST(request: Request) {
     };
 
     await createLead(userKey, payload);
+    await recordEvent(userKey, {
+      type: "copy_wechat",
+      url: payload.url,
+      score: payload.score,
+      percentile: payload.percentile,
+      industry: payload.industry,
+    });
     await notifyFeishuLead(payload);
 
     return NextResponse.json({ ok: true });

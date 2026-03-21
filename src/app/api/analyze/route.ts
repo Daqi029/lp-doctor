@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { analyzeLandingPage } from "@/lib/rules";
-import { getCachedResult, getQuota, makeUserKey, normalizeUrl, saveAnalyzeResult } from "@/lib/store";
+import { getCachedResult, getQuota, makeUserKey, normalizeUrl, recordEvent, saveAnalyzeResult } from "@/lib/store";
 import type { AnalyzeResponse } from "@/lib/types";
 
 function getClientIp(h: Headers): string {
@@ -41,8 +41,17 @@ export async function POST(request: Request) {
       anonId,
     );
 
+    await recordEvent(userKey, { type: "submit_url", url: normalized });
+
     const cached = await getCachedResult(userKey, normalized);
     if (cached) {
+      await recordEvent(userKey, {
+        type: "result_generated",
+        url: normalized,
+        score: cached.score,
+        percentile: cached.percentile,
+        industry: cached.industry,
+      });
       const quota = await getQuota(userKey);
       const response = NextResponse.json<AnalyzeResponse>({
         ok: true,
@@ -55,6 +64,7 @@ export async function POST(request: Request) {
 
     const quota = await getQuota(userKey);
     if (quota.remaining <= 0) {
+      await recordEvent(userKey, { type: "quota_exceeded", url: normalized });
       const response = NextResponse.json<AnalyzeResponse>(
         {
           ok: false,
@@ -69,6 +79,13 @@ export async function POST(request: Request) {
 
     const result = await analyzeLandingPage(normalized);
     await saveAnalyzeResult(userKey, normalized, result);
+    await recordEvent(userKey, {
+      type: "result_generated",
+      url: normalized,
+      score: result.score,
+      percentile: result.percentile,
+      industry: result.industry,
+    });
     const nextQuota = await getQuota(userKey);
 
     const response = NextResponse.json<AnalyzeResponse>({ ok: true, result, quota: nextQuota });

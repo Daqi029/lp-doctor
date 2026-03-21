@@ -34,12 +34,32 @@ type LeadEntry = LeadPayload & {
   createdAt: string;
 };
 
+export type EventType =
+  | "page_view"
+  | "submit_url"
+  | "result_generated"
+  | "download_report"
+  | "copy_wechat"
+  | "quota_exceeded";
+
+type EventEntry = {
+  id: string;
+  type: EventType;
+  userKey: string;
+  createdAt: string;
+  url?: string;
+  score?: number;
+  percentile?: number;
+  industry?: string;
+};
+
 type StoreShape = {
   users: Record<string, UserState>;
   leads: LeadEntry[];
+  events: EventEntry[];
 };
 
-const DEFAULT_STORE: StoreShape = { users: {}, leads: [] };
+const DEFAULT_STORE: StoreShape = { users: {}, leads: [], events: [] };
 
 function hashText(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 16);
@@ -89,6 +109,10 @@ async function writeStore(data: StoreShape): Promise<void> {
 function getToday(): string {
   const now = new Date();
   return now.toISOString().slice(0, 10);
+}
+
+function isSameDay(iso: string, target: string): boolean {
+  return iso.slice(0, 10) === target;
 }
 
 function getUserState(store: StoreShape, userKey: string): UserState {
@@ -153,9 +177,51 @@ export async function createLead(userKey: string, payload: LeadPayload): Promise
   return entry;
 }
 
+export async function recordEvent(
+  userKey: string,
+  payload: {
+    type: EventType;
+    url?: string;
+    score?: number;
+    percentile?: number;
+    industry?: string;
+  },
+): Promise<void> {
+  const store = await readStore();
+  store.events.unshift({
+    id: crypto.randomUUID(),
+    userKey,
+    createdAt: new Date().toISOString(),
+    ...payload,
+  });
+  store.events = store.events.slice(0, 5000);
+  await writeStore(store);
+}
+
 export async function getDailySummary(date?: string): Promise<{
   date: string;
+  overview: {
+    visitors: number;
+    submitUrl: number;
+    resultGenerated: number;
+    downloadReport: number;
+    copyWechat: number;
+    quotaExceeded: number;
+  };
+  funnel: {
+    label: string;
+    count: number;
+    rateFromPrev: number | null;
+  }[];
   analyzeUsers: number;
+  submissions: {
+    createdAt: string;
+    url: string;
+    score: number | null;
+    industry: string | null;
+    downloadedReport: boolean;
+    copiedWechat: boolean;
+  }[];
   leads: LeadEntry[];
 }> {
   const store = await readStore();
@@ -163,8 +229,83 @@ export async function getDailySummary(date?: string): Promise<{
 
   const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date === target && u.counter.used > 0).length;
   const leads = store.leads.filter((item) => item.createdAt.slice(0, 10) === target);
+  const events = store.events.filter((item) => isSameDay(item.createdAt, target));
 
-  return { date: target, analyzeUsers, leads };
+  const pageViews = events.filter((item) => item.type === "page_view");
+  const submitUrl = events.filter((item) => item.type === "submit_url");
+  const resultGenerated = events.filter((item) => item.type === "result_generated");
+  const downloadReport = events.filter((item) => item.type === "download_report");
+  const copyWechat = events.filter((item) => item.type === "copy_wechat");
+  const quotaExceeded = events.filter((item) => item.type === "quota_exceeded");
+
+  const grouped = new Map<string, { createdAt: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }>();
+
+  for (const entry of submitUrl) {
+    const key = `${entry.userKey}:${entry.url || "unknown"}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        createdAt: entry.createdAt,
+        url: entry.url || "-",
+        score: null,
+        industry: null,
+        downloadedReport: false,
+        copiedWechat: false,
+      });
+    }
+  }
+
+  for (const entry of resultGenerated) {
+    const key = `${entry.userKey}:${entry.url || "unknown"}`;
+    const current = grouped.get(key);
+    if (current) {
+      current.score = typeof entry.score === "number" ? entry.score : current.score;
+      current.industry = entry.industry || current.industry;
+    }
+  }
+
+  for (const entry of downloadReport) {
+    const key = `${entry.userKey}:${entry.url || "unknown"}`;
+    const current = grouped.get(key);
+    if (current) current.downloadedReport = true;
+  }
+
+  for (const entry of copyWechat) {
+    const key = `${entry.userKey}:${entry.url || "unknown"}`;
+    const current = grouped.get(key);
+    if (current) current.copiedWechat = true;
+  }
+
+  const funnelCounts = [
+    { label: "访问", count: new Set(pageViews.map((item) => item.userKey)).size },
+    { label: "提交 URL", count: submitUrl.length },
+    { label: "生成结果", count: resultGenerated.length },
+    { label: "下载报告", count: downloadReport.length },
+    { label: "复制微信", count: copyWechat.length },
+  ];
+
+  const funnel = funnelCounts.map((item, index) => ({
+    ...item,
+    rateFromPrev:
+      index === 0 || funnelCounts[index - 1].count === 0
+        ? null
+        : Math.round((item.count / funnelCounts[index - 1].count) * 100),
+  }));
+
+  return {
+    date: target,
+    overview: {
+      visitors: new Set(pageViews.map((item) => item.userKey)).size,
+      submitUrl: submitUrl.length,
+      resultGenerated: resultGenerated.length,
+      downloadReport: downloadReport.length,
+      copyWechat: copyWechat.length,
+      quotaExceeded: quotaExceeded.length,
+    },
+    funnel,
+    analyzeUsers,
+    submissions: Array.from(grouped.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    leads,
+  };
 }
 
 export async function resetStore(): Promise<void> {

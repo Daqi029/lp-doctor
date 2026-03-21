@@ -75,6 +75,14 @@ export default function Home() {
     return () => window.clearInterval(timer);
   }, [state.loading]);
 
+  useEffect(() => {
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "page_view" }),
+    }).catch(() => undefined);
+  }, []);
+
   const progress = Math.round(((stageIndex + 1) / PROCESS_STAGES.length) * 100);
 
   const scoreStyle = scoreTone(state.result?.score || 0);
@@ -197,6 +205,18 @@ export default function Home() {
 
   function handleDownloadReport() {
     if (!state.result) return;
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "download_report",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+      }),
+    }).catch(() => undefined);
 
     const reportHtml = `<!doctype html>
 <html lang="zh-CN">

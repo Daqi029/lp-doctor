@@ -33,6 +33,8 @@ cp .env.example .env.local
 ```
 
 - `FEISHU_WEBHOOK_URL`：飞书机器人 webhook（可留空）
+- `DASHBOARD_USERNAME`：看板 Basic Auth 用户名（可留空）
+- `DASHBOARD_PASSWORD`：看板 Basic Auth 密码（可留空）
 
 ## 本地运行
 ```bash
@@ -42,6 +44,10 @@ npm run dev
 ```
 
 打开 `http://localhost:3000`。
+
+如果你设置了 `DASHBOARD_USERNAME` 和 `DASHBOARD_PASSWORD`，访问以下地址会先弹出密码框：
+- `http://localhost:3000/dashboard`
+- `http://localhost:3000/api/daily-summary`
 
 ## 日终检查
 查询当天线索和使用人数：
