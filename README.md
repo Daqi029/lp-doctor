@@ -33,8 +33,33 @@ cp .env.example .env.local
 ```
 
 - `FEISHU_WEBHOOK_URL`：飞书机器人 webhook（可留空）
+- `SUPABASE_URL`：Supabase 项目 URL（生产推荐填写）
+- `SUPABASE_SERVICE_ROLE_KEY`：Supabase service role key（仅服务端使用）
 - `DASHBOARD_USERNAME`：看板 Basic Auth 用户名（可留空）
 - `DASHBOARD_PASSWORD`：看板 Basic Auth 密码（可留空）
+
+## 线上持久化数据（必配）
+生产环境必须配置 Supabase。
+
+如果不配置 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`：
+- 线上事件无法可靠持久化
+- Dashboard 数据会丢失
+- 当前版本会直接报错，阻止你误以为“已经接上数据库”
+
+推荐做法：
+1. 在 Supabase 创建一个免费项目
+2. 打开 SQL Editor
+3. 执行 [`supabase/schema.sql`](./supabase/schema.sql)
+4. 在 Vercel 环境变量中填写：
+   - `SUPABASE_URL`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+
+配置完成后：
+- 事件追踪
+- 线索记录
+- Dashboard 数据
+
+都会持久保存，不会因为刷新或实例切换而丢失。
 
 ## 本地运行
 ```bash

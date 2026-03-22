@@ -13,6 +13,7 @@ type SubmissionRow = {
 
 type SummaryPayload = {
   date: string;
+  storageMode: "supabase" | "local";
   overview: {
     visitors: number;
     submitUrl: number;
@@ -45,9 +46,9 @@ export default function DashboardPage() {
     async function load() {
       try {
         const response = await fetch("/api/daily-summary");
-        const payload = (await response.json()) as { ok: boolean; data?: SummaryPayload };
+        const payload = (await response.json()) as { ok: boolean; data?: SummaryPayload; message?: string };
         if (!response.ok || !payload.ok || !payload.data) {
-          setError("加载看板失败");
+          setError(payload.message || "加载看板失败");
           return;
         }
         setData(payload.data);
@@ -96,6 +97,16 @@ export default function DashboardPage() {
 
           {!loading && data && activeTab === "data" ? (
             <div className="mt-8 space-y-8">
+              <div className={`rounded-2xl border px-4 py-3 text-sm ${
+                data.storageMode === "supabase"
+                  ? "border-[#b9dfc6] bg-[#edf9f1] text-[#1b6a3f]"
+                  : "border-[#f0c2a8] bg-[#fff5ee] text-[#9b4a20]"
+              }`}>
+                当前存储模式：<span className="font-semibold">{data.storageMode}</span>
+                {data.storageMode === "supabase"
+                  ? "。线上事件、线索和看板数据会持久保存。"
+                  : "。当前不是持久化数据库，实例刷新后数据可能丢失。"}
+              </div>
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
                 <MetricCard label="今日访问" value={data.overview.visitors} />
                 <MetricCard label="提交 URL" value={data.overview.submitUrl} />

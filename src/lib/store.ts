@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { AnalyzeResult, LeadPayload } from "./types";
+import { assertPersistentStorageConfigured, getStorageMode, getSupabaseAdmin, hasSupabaseConfig } from "./supabase";
 
 function resolveDataDir(): string {
   if (process.env.DATA_DIR) return process.env.DATA_DIR;
@@ -11,6 +12,7 @@ function resolveDataDir(): string {
 
 const DATA_DIR = resolveDataDir();
 const STORE_FILE = path.join(DATA_DIR, "store.json");
+const QUOTA_LIMIT = 2;
 
 type CachedEntry = {
   url: string;
@@ -53,6 +55,28 @@ type EventEntry = {
   industry?: string;
 };
 
+type SupabaseEventRow = {
+  id: string;
+  type: string;
+  user_key: string;
+  created_at: string;
+  url: string | null;
+  score: number | null;
+  percentile: number | null;
+  industry: string | null;
+};
+
+type SupabaseLeadRow = {
+  id: string;
+  user_key: string;
+  created_at: string;
+  url: string;
+  score: number;
+  percentile: number;
+  industry: string;
+  summary: string;
+};
+
 type StoreShape = {
   users: Record<string, UserState>;
   leads: LeadEntry[];
@@ -61,145 +85,39 @@ type StoreShape = {
 
 const DEFAULT_STORE: StoreShape = { users: {}, leads: [], events: [] };
 
-function hashText(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex").slice(0, 16);
-}
-
-export function makeUserKey(ip: string, userAgent: string, anonId: string): string {
-  return hashText(`${ip}|${userAgent}|${anonId}`);
-}
-
-export function normalizeUrl(input: string): string {
-  const raw = input.trim();
-  if (!raw) {
-    throw new Error("empty url");
-  }
-  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw);
-  const normalizedInput = raw.startsWith("//") ? `https:${raw}` : hasProtocol ? raw : `https://${raw}`;
-  const url = new URL(normalizedInput);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("invalid protocol");
-  }
-  return `${url.origin}${url.pathname}`.replace(/\/$/, "");
-}
-
-async function ensureStore(): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try {
-    await fs.access(STORE_FILE);
-  } catch {
-    await fs.writeFile(STORE_FILE, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
-  }
-}
-
-async function readStore(): Promise<StoreShape> {
-  await ensureStore();
-  const raw = await fs.readFile(STORE_FILE, "utf8");
-  try {
-    return JSON.parse(raw) as StoreShape;
-  } catch {
-    return DEFAULT_STORE;
-  }
-}
-
-async function writeStore(data: StoreShape): Promise<void> {
-  await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), "utf8");
-}
-
-function getToday(): string {
-  const now = new Date();
-  return now.toISOString().slice(0, 10);
-}
-
-function isSameDay(iso: string, target: string): boolean {
-  return iso.slice(0, 10) === target;
-}
-
-function getUserState(store: StoreShape, userKey: string): UserState {
-  if (!store.users[userKey]) {
-    store.users[userKey] = {
-      counter: { date: getToday(), used: 0 },
-      cache: {},
-    };
+function normalizeStoreShape(input: unknown): StoreShape {
+  if (!input || typeof input !== "object") {
+    return { users: {}, leads: [], events: [] };
   }
 
-  const user = store.users[userKey];
-  if (user.counter.date !== getToday()) {
-    user.counter = { date: getToday(), used: 0 };
-  }
+  const candidate = input as Partial<StoreShape>;
+  const rawUsers = candidate.users && typeof candidate.users === "object" ? candidate.users : {};
+  const users = Object.fromEntries(
+    Object.entries(rawUsers).map(([key, value]) => {
+      const entry = value as Partial<UserState> | undefined;
+      return [
+        key,
+        {
+          counter:
+            entry?.counter && typeof entry.counter.date === "string" && typeof entry.counter.used === "number"
+              ? entry.counter
+              : { date: getToday(), used: 0 },
+          cache: entry?.cache && typeof entry.cache === "object" ? entry.cache : {},
+        } satisfies UserState,
+      ];
+    }),
+  );
 
-  return user;
-}
-
-export async function getQuota(userKey: string): Promise<{ used: number; limit: number; remaining: number }> {
-  const store = await readStore();
-  const user = getUserState(store, userKey);
-  const limit = 2;
-  return { used: user.counter.used, limit, remaining: Math.max(0, limit - user.counter.used) };
-}
-
-export async function getCachedResult(userKey: string, url: string): Promise<AnalyzeResult | null> {
-  const store = await readStore();
-  const user = getUserState(store, userKey);
-  const cached = user.cache[url];
-  if (!cached) return null;
-
-  const ageMs = Date.now() - new Date(cached.createdAt).getTime();
-  if (ageMs > 24 * 60 * 60 * 1000) return null;
-
-  return { ...cached.result, source: "cache" };
-}
-
-export async function saveAnalyzeResult(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
-  const store = await readStore();
-  const user = getUserState(store, userKey);
-  user.counter.used += 1;
-  user.cache[url] = {
-    url,
-    result,
-    createdAt: new Date().toISOString(),
+  return {
+    users,
+    leads: Array.isArray(candidate.leads) ? candidate.leads : [],
+    events: Array.isArray(candidate.events) ? candidate.events : [],
   };
-  await writeStore(store);
 }
 
-export async function createLead(userKey: string, payload: LeadPayload): Promise<LeadEntry> {
-  const store = await readStore();
-  const entry: LeadEntry = {
-    ...payload,
-    id: crypto.randomUUID(),
-    userKey,
-    createdAt: new Date().toISOString(),
-  };
-
-  store.leads.unshift(entry);
-  store.leads = store.leads.slice(0, 1000);
-  await writeStore(store);
-  return entry;
-}
-
-export async function recordEvent(
-  userKey: string,
-  payload: {
-    type: EventType;
-    url?: string;
-    score?: number;
-    percentile?: number;
-    industry?: string;
-  },
-): Promise<void> {
-  const store = await readStore();
-  store.events.unshift({
-    id: crypto.randomUUID(),
-    userKey,
-    createdAt: new Date().toISOString(),
-    ...payload,
-  });
-  store.events = store.events.slice(0, 5000);
-  await writeStore(store);
-}
-
-export async function getDailySummary(date?: string): Promise<{
+type DailySummary = {
   date: string;
+  storageMode: "supabase" | "local";
   overview: {
     visitors: number;
     submitUrl: number;
@@ -223,14 +141,149 @@ export async function getDailySummary(date?: string): Promise<{
     copiedWechat: boolean;
   }[];
   leads: LeadEntry[];
-}> {
-  const store = await readStore();
-  const target = date ?? getToday();
+};
 
-  const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date === target && u.counter.used > 0).length;
-  const leads = store.leads.filter((item) => item.createdAt.slice(0, 10) === target);
-  const events = store.events.filter((item) => isSameDay(item.createdAt, target));
+function hashText(input: string): string {
+  return crypto.createHash("sha256").update(input).digest("hex").slice(0, 16);
+}
 
+export function makeUserKey(ip: string, userAgent: string, anonId: string): string {
+  return hashText(`${ip}|${userAgent}|${anonId}`);
+}
+
+export function normalizeUrl(input: string): string {
+  const raw = input.trim();
+  if (!raw) throw new Error("empty url");
+  const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw);
+  const normalizedInput = raw.startsWith("//") ? `https:${raw}` : hasProtocol ? raw : `https://${raw}`;
+  const url = new URL(normalizedInput);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("invalid protocol");
+  }
+  return `${url.origin}${url.pathname}`.replace(/\/$/, "");
+}
+
+function getToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isSameDay(iso: string, target: string): boolean {
+  return iso.slice(0, 10) === target;
+}
+
+function dayRange(date: string): { start: string; end: string } {
+  const start = `${date}T00:00:00.000Z`;
+  const day = new Date(start);
+  day.setUTCDate(day.getUTCDate() + 1);
+  return { start, end: day.toISOString() };
+}
+
+async function ensureStore(): Promise<void> {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.access(STORE_FILE);
+  } catch {
+    await fs.writeFile(STORE_FILE, JSON.stringify(DEFAULT_STORE, null, 2), "utf8");
+  }
+}
+
+async function readLocalStore(): Promise<StoreShape> {
+  await ensureStore();
+  const raw = await fs.readFile(STORE_FILE, "utf8");
+  try {
+    const parsed = JSON.parse(raw);
+    const store = normalizeStoreShape(parsed);
+    if (JSON.stringify(store) !== JSON.stringify(parsed)) {
+      await writeLocalStore(store);
+    }
+    return store;
+  } catch {
+    await writeLocalStore(DEFAULT_STORE);
+    return { users: {}, leads: [], events: [] };
+  }
+}
+
+async function writeLocalStore(data: StoreShape): Promise<void> {
+  await fs.writeFile(STORE_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+function getLocalUserState(store: StoreShape, userKey: string): UserState {
+  if (!store.users[userKey]) {
+    store.users[userKey] = {
+      counter: { date: getToday(), used: 0 },
+      cache: {},
+    };
+  }
+
+  const user = store.users[userKey];
+  if (user.counter.date !== getToday()) {
+    user.counter = { date: getToday(), used: 0 };
+  }
+
+  return user;
+}
+
+async function getQuotaLocal(userKey: string) {
+  const store = await readLocalStore();
+  const user = getLocalUserState(store, userKey);
+  return { used: user.counter.used, limit: QUOTA_LIMIT, remaining: Math.max(0, QUOTA_LIMIT - user.counter.used) };
+}
+
+async function getCachedResultLocal(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  const store = await readLocalStore();
+  const user = getLocalUserState(store, userKey);
+  const cached = user.cache[url];
+  if (!cached) return null;
+
+  const ageMs = Date.now() - new Date(cached.createdAt).getTime();
+  if (ageMs > 24 * 60 * 60 * 1000) return null;
+  return { ...cached.result, source: "cache" };
+}
+
+async function saveAnalyzeResultLocal(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
+  const store = await readLocalStore();
+  const user = getLocalUserState(store, userKey);
+  user.counter.used += 1;
+  user.cache[url] = { url, result, createdAt: new Date().toISOString() };
+  await writeLocalStore(store);
+}
+
+async function createLeadLocal(userKey: string, payload: LeadPayload): Promise<LeadEntry> {
+  const store = await readLocalStore();
+  const entry: LeadEntry = {
+    ...payload,
+    id: crypto.randomUUID(),
+    userKey,
+    createdAt: new Date().toISOString(),
+  };
+  store.leads.unshift(entry);
+  store.leads = store.leads.slice(0, 1000);
+  await writeLocalStore(store);
+  return entry;
+}
+
+async function recordEventLocal(
+  userKey: string,
+  payload: {
+    type: EventType;
+    url?: string;
+    score?: number;
+    percentile?: number;
+    industry?: string;
+  },
+): Promise<void> {
+  const store = await readLocalStore();
+  store.events.unshift({
+    id: crypto.randomUUID(),
+    userKey,
+    createdAt: new Date().toISOString(),
+    ...payload,
+  });
+  store.events = store.events.slice(0, 5000);
+  await writeLocalStore(store);
+}
+
+function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[], analyzeUsers: number): DailySummary {
   const pageViews = events.filter((item) => item.type === "page_view");
   const submitUrl = events.filter((item) => item.type === "submit_url");
   const resultGenerated = events.filter((item) => item.type === "result_generated");
@@ -238,7 +291,10 @@ export async function getDailySummary(date?: string): Promise<{
   const copyWechat = events.filter((item) => item.type === "copy_wechat");
   const quotaExceeded = events.filter((item) => item.type === "quota_exceeded");
 
-  const grouped = new Map<string, { createdAt: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }>();
+  const grouped = new Map<
+    string,
+    { createdAt: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }
+  >();
 
   for (const entry of submitUrl) {
     const key = `${entry.userKey}:${entry.url || "unknown"}`;
@@ -264,14 +320,12 @@ export async function getDailySummary(date?: string): Promise<{
   }
 
   for (const entry of downloadReport) {
-    const key = `${entry.userKey}:${entry.url || "unknown"}`;
-    const current = grouped.get(key);
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.downloadedReport = true;
   }
 
   for (const entry of copyWechat) {
-    const key = `${entry.userKey}:${entry.url || "unknown"}`;
-    const current = grouped.get(key);
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.copiedWechat = true;
   }
 
@@ -285,14 +339,12 @@ export async function getDailySummary(date?: string): Promise<{
 
   const funnel = funnelCounts.map((item, index) => ({
     ...item,
-    rateFromPrev:
-      index === 0 || funnelCounts[index - 1].count === 0
-        ? null
-        : Math.round((item.count / funnelCounts[index - 1].count) * 100),
+    rateFromPrev: index === 0 || funnelCounts[index - 1].count === 0 ? null : Math.round((item.count / funnelCounts[index - 1].count) * 100),
   }));
 
   return {
-    date: target,
+    date,
+    storageMode: getStorageMode(),
     overview: {
       visitors: new Set(pageViews.map((item) => item.userKey)).size,
       submitUrl: submitUrl.length,
@@ -308,7 +360,252 @@ export async function getDailySummary(date?: string): Promise<{
   };
 }
 
-export async function resetStore(): Promise<void> {
+async function getDailySummaryLocal(date?: string): Promise<DailySummary> {
+  const store = await readLocalStore();
+  const target = date ?? getToday();
+  const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date === target && u.counter.used > 0).length;
+  const leads = store.leads.filter((item) => isSameDay(item.createdAt, target));
+  const events = store.events.filter((item) => isSameDay(item.createdAt, target));
+  return buildDailySummary(target, events, leads, analyzeUsers);
+}
+
+async function resetStoreLocal(): Promise<void> {
   await ensureStore();
-  await writeStore(DEFAULT_STORE);
+  await writeLocalStore(DEFAULT_STORE);
+}
+
+async function getQuotaSupabase(userKey: string) {
+  const supabase = getSupabaseAdmin();
+  const today = getToday();
+  const { data } = (await supabase
+    .from("user_daily_quotas")
+    .select("used")
+    .eq("user_key", userKey)
+    .eq("date", today)
+    .maybeSingle()) as { data: { used: number } | null };
+
+  const used = data?.used ?? 0;
+  return { used, limit: QUOTA_LIMIT, remaining: Math.max(0, QUOTA_LIMIT - used) };
+}
+
+async function getCachedResultSupabase(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = (await supabase
+    .from("cached_results")
+    .select("result, created_at")
+    .eq("user_key", userKey)
+    .eq("url", url)
+    .maybeSingle()) as { data: { result: AnalyzeResult; created_at: string } | null };
+
+  if (!data) return null;
+  const ageMs = Date.now() - new Date(data.created_at).getTime();
+  if (ageMs > 24 * 60 * 60 * 1000) return null;
+  return { ...(data.result as AnalyzeResult), source: "cache" };
+}
+
+async function saveAnalyzeResultSupabase(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const today = getToday();
+  const { data: quotaRow } = (await supabase
+    .from("user_daily_quotas")
+    .select("used")
+    .eq("user_key", userKey)
+    .eq("date", today)
+    .maybeSingle()) as { data: { used: number } | null };
+
+  const used = quotaRow?.used ?? 0;
+
+  const quotaPromise = supabase.from("user_daily_quotas").upsert(
+    {
+      user_key: userKey,
+      date: today,
+      used: used + 1,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_key,date" },
+  );
+
+  const cachePromise = supabase.from("cached_results").upsert(
+    {
+      user_key: userKey,
+      url,
+      result,
+      created_at: new Date().toISOString(),
+    },
+    { onConflict: "user_key,url" },
+  );
+
+  await Promise.all([quotaPromise, cachePromise]);
+}
+
+async function createLeadSupabase(userKey: string, payload: LeadPayload): Promise<LeadEntry> {
+  const supabase = getSupabaseAdmin();
+  const entry = {
+    user_key: userKey,
+    url: payload.url,
+    score: payload.score,
+    percentile: payload.percentile,
+    industry: payload.industry,
+    summary: payload.summary,
+  };
+
+  const { data, error } = await supabase
+    .from("leads")
+    .insert(entry)
+    .select("id, user_key, url, score, percentile, industry, summary, created_at")
+    .single();
+
+  if (error || !data) {
+    throw new Error("failed to create lead");
+  }
+
+  return {
+    id: data.id,
+    userKey: data.user_key,
+    url: data.url,
+    score: data.score,
+    percentile: data.percentile,
+    industry: data.industry,
+    summary: data.summary,
+    createdAt: data.created_at,
+  };
+}
+
+async function recordEventSupabase(
+  userKey: string,
+  payload: {
+    type: EventType;
+    url?: string;
+    score?: number;
+    percentile?: number;
+    industry?: string;
+  },
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("events").insert({
+    user_key: userKey,
+    type: payload.type,
+    url: payload.url,
+    score: payload.score,
+    percentile: payload.percentile,
+    industry: payload.industry,
+  });
+  if (error) throw new Error("failed to record event");
+}
+
+async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
+  const supabase = getSupabaseAdmin();
+  const target = date ?? getToday();
+  const range = dayRange(target);
+
+  const [{ data: eventRows, error: eventError }, { data: leadRows, error: leadError }, { data: quotaRows, error: quotaError }] =
+    await Promise.all([
+      supabase
+        .from("events")
+        .select("id, type, user_key, created_at, url, score, percentile, industry")
+        .gte("created_at", range.start)
+        .lt("created_at", range.end)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("leads")
+        .select("id, user_key, created_at, url, score, percentile, industry, summary")
+        .gte("created_at", range.start)
+        .lt("created_at", range.end)
+        .order("created_at", { ascending: false }),
+      supabase.from("user_daily_quotas").select("user_key").eq("date", target).gt("used", 0),
+    ]);
+
+  if (eventError || leadError || quotaError) {
+    throw new Error("failed to load summary");
+  }
+
+  const events: EventEntry[] = ((eventRows ?? []) as SupabaseEventRow[]).map((row) => ({
+    id: row.id,
+    type: row.type as EventType,
+    userKey: row.user_key,
+    createdAt: row.created_at,
+    url: row.url ?? undefined,
+    score: row.score ?? undefined,
+    percentile: row.percentile ?? undefined,
+    industry: row.industry ?? undefined,
+  }));
+
+  const leads: LeadEntry[] = ((leadRows ?? []) as SupabaseLeadRow[]).map((row) => ({
+    id: row.id,
+    userKey: row.user_key,
+    createdAt: row.created_at,
+    url: row.url,
+    score: row.score,
+    percentile: row.percentile,
+    industry: row.industry,
+    summary: row.summary,
+  }));
+
+  return buildDailySummary(target, events, leads, quotaRows?.length ?? 0);
+}
+
+async function resetStoreSupabase(): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  await Promise.all([
+    supabase.from("events").delete().neq("id", ""),
+    supabase.from("leads").delete().neq("id", ""),
+    supabase.from("cached_results").delete().neq("url", ""),
+    supabase.from("user_daily_quotas").delete().neq("user_key", ""),
+  ]);
+}
+
+export async function getQuota(userKey: string): Promise<{ used: number; limit: number; remaining: number }> {
+  assertPersistentStorageConfigured();
+  return hasSupabaseConfig() ? getQuotaSupabase(userKey) : getQuotaLocal(userKey);
+}
+
+export async function getCachedResult(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  assertPersistentStorageConfigured();
+  return hasSupabaseConfig() ? getCachedResultSupabase(userKey, url) : getCachedResultLocal(userKey, url);
+}
+
+export async function saveAnalyzeResult(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
+  assertPersistentStorageConfigured();
+  if (hasSupabaseConfig()) {
+    await saveAnalyzeResultSupabase(userKey, url, result);
+    return;
+  }
+  await saveAnalyzeResultLocal(userKey, url, result);
+}
+
+export async function createLead(userKey: string, payload: LeadPayload): Promise<LeadEntry> {
+  assertPersistentStorageConfigured();
+  return hasSupabaseConfig() ? createLeadSupabase(userKey, payload) : createLeadLocal(userKey, payload);
+}
+
+export async function recordEvent(
+  userKey: string,
+  payload: {
+    type: EventType;
+    url?: string;
+    score?: number;
+    percentile?: number;
+    industry?: string;
+  },
+): Promise<void> {
+  assertPersistentStorageConfigured();
+  if (hasSupabaseConfig()) {
+    await recordEventSupabase(userKey, payload);
+    return;
+  }
+  await recordEventLocal(userKey, payload);
+}
+
+export async function getDailySummary(date?: string): Promise<DailySummary> {
+  assertPersistentStorageConfigured();
+  return hasSupabaseConfig() ? getDailySummarySupabase(date) : getDailySummaryLocal(date);
+}
+
+export async function resetStore(): Promise<void> {
+  assertPersistentStorageConfigured();
+  if (hasSupabaseConfig()) {
+    await resetStoreSupabase();
+    return;
+  }
+  await resetStoreLocal();
 }
