@@ -239,7 +239,7 @@ export default function Home() {
           </div>
 
           <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-tight md:text-5xl">
-            30秒拿到3个最该优先修改的转化问题
+            30秒找到最该先改的3个问题
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-[#5a6b92] md:text-base">
             输入你的 Landing Page 链接，立即拿到分数、问题判断，以及 3 个可直接推进的优化方向。
