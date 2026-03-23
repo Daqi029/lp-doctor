@@ -36,16 +36,28 @@ const tabs = [
   { id: "funnel", label: "图形漏斗" },
 ] as const;
 
+const ALL_SCOPE = "all";
+
+function formatScopeLabel(date: string): string {
+  return date === ALL_SCOPE ? "全部历史数据" : date;
+}
+
 export default function DashboardPage() {
+  const todayString = new Date().toISOString().slice(0, 10);
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("data");
   const [data, setData] = useState<SummaryPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [scope, setScope] = useState<string>(ALL_SCOPE);
+  const [dateInput, setDateInput] = useState("");
 
   useEffect(() => {
-    async function load() {
+    async function load(targetScope: string) {
+      setLoading(true);
+      setError("");
       try {
-        const response = await fetch("/api/daily-summary");
+        const url = targetScope === ALL_SCOPE ? "/api/daily-summary?date=all" : `/api/daily-summary?date=${targetScope}`;
+        const response = await fetch(url);
         const payload = (await response.json()) as { ok: boolean; data?: SummaryPayload; message?: string };
         if (!response.ok || !payload.ok || !payload.data) {
           setError(payload.message || "加载看板失败");
@@ -59,10 +71,26 @@ export default function DashboardPage() {
       }
     }
 
-    void load();
-  }, []);
+    void load(scope);
+  }, [scope]);
 
   const maxFunnelCount = useMemo(() => Math.max(...(data?.funnel.map((item) => item.count) || [1])), [data]);
+  const metricLabelPrefix = data?.date === ALL_SCOPE ? "累计" : "当日";
+
+  function handleToday() {
+    setDateInput(todayString);
+    setScope(todayString);
+  }
+
+  function handleAllHistory() {
+    setDateInput("");
+    setScope(ALL_SCOPE);
+  }
+
+  function handleApplyDate() {
+    if (!dateInput) return;
+    setScope(dateInput);
+  }
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#e8eefc_0%,_#f4f6fb_35%,_#f3f2ee_78%)] px-6 py-10 text-[#1a1a1a]">
@@ -73,26 +101,63 @@ export default function DashboardPage() {
               <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">内部数据看板</p>
               <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#1d2f56]">Landing Page 增长诊断 Dashboard</h1>
               <p className="mt-2 text-sm text-[#5b6f99]">
-                {data ? `统计日期：${data.date}` : "加载今日数据中..."}
+                {data ? `统计范围：${formatScopeLabel(data.date)}` : "加载历史数据中..."}
               </p>
             </div>
-            <div className="inline-flex rounded-2xl border border-[#d7dff0] bg-white p-1">
-              {tabs.map((tab) => (
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <div className="flex items-center gap-2 rounded-2xl border border-[#d7dff0] bg-white px-3 py-2">
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    activeTab === tab.id ? "bg-[#1f355f] text-white" : "text-[#506187] hover:bg-[#eef3ff]"
+                  onClick={handleAllHistory}
+                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    scope === ALL_SCOPE ? "bg-[#1f355f] text-white" : "text-[#506187] hover:bg-[#eef3ff]"
                   }`}
                 >
-                  {tab.label}
+                  全部历史
                 </button>
-              ))}
+                <button
+                    type="button"
+                    onClick={handleToday}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    scope !== ALL_SCOPE && scope === todayString
+                      ? "bg-[#1f355f] text-white"
+                      : "text-[#506187] hover:bg-[#eef3ff]"
+                  }`}
+                >
+                  今天
+                </button>
+                <input
+                  type="date"
+                  value={dateInput}
+                  onChange={(event) => setDateInput(event.target.value)}
+                  className="rounded-xl border border-[#d7dff0] px-3 py-2 text-sm text-[#2b3856] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyDate}
+                  className="rounded-xl bg-[#eef3ff] px-3 py-2 text-sm font-medium text-[#1f355f] transition hover:bg-[#dde8ff]"
+                >
+                  查看日期
+                </button>
+              </div>
+              <div className="inline-flex rounded-2xl border border-[#d7dff0] bg-white p-1">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
+                      activeTab === tab.id ? "bg-[#1f355f] text-white" : "text-[#506187] hover:bg-[#eef3ff]"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {loading ? <p className="mt-8 text-sm text-[#5b6f99]">正在加载今日数据...</p> : null}
+          {loading ? <p className="mt-8 text-sm text-[#5b6f99]">正在加载数据...</p> : null}
           {error ? <p className="mt-8 rounded-xl border border-[#d58b8b] bg-[#fff5f5] px-4 py-3 text-sm text-[#a33b3b]">{error}</p> : null}
 
           {!loading && data && activeTab === "data" ? (
@@ -108,7 +173,7 @@ export default function DashboardPage() {
                   : "。当前不是持久化数据库，实例刷新后数据可能丢失。"}
               </div>
               <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-                <MetricCard label="今日访问" value={data.overview.visitors} />
+                <MetricCard label={`${metricLabelPrefix}访问`} value={data.overview.visitors} />
                 <MetricCard label="提交 URL" value={data.overview.submitUrl} />
                 <MetricCard label="生成结果" value={data.overview.resultGenerated} />
                 <MetricCard label="下载报告" value={data.overview.downloadReport} />
@@ -118,7 +183,7 @@ export default function DashboardPage() {
 
               <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-[#1d4684]">今日线索列表</h2>
+                  <h2 className="text-lg font-semibold text-[#1d4684]">{data.date === ALL_SCOPE ? "历史线索列表" : "当日线索列表"}</h2>
                   <p className="text-xs text-[#6b7a9d]">共 {data.submissions.length} 条提交</p>
                 </div>
                 <div className="mt-4 overflow-x-auto">
@@ -148,7 +213,9 @@ export default function DashboardPage() {
                       ))}
                     </tbody>
                   </table>
-                  {data.submissions.length === 0 ? <p className="px-3 py-6 text-sm text-[#6b7a9d]">今天还没有提交数据。</p> : null}
+                  {data.submissions.length === 0 ? (
+                    <p className="px-3 py-6 text-sm text-[#6b7a9d]">{data.date === ALL_SCOPE ? "还没有历史提交数据。" : "这个日期还没有提交数据。"}</p>
+                  ) : null}
                 </div>
               </div>
             </div>

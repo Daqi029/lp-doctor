@@ -143,6 +143,10 @@ type DailySummary = {
   leads: LeadEntry[];
 };
 
+function isAllDateScope(date?: string): boolean {
+  return date === "all";
+}
+
 function hashText(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 16);
 }
@@ -362,6 +366,11 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
 
 async function getDailySummaryLocal(date?: string): Promise<DailySummary> {
   const store = await readLocalStore();
+  if (isAllDateScope(date)) {
+    const analyzeUsers = Object.values(store.users).filter((u) => u.counter.used > 0).length;
+    return buildDailySummary("all", store.events, store.leads, analyzeUsers);
+  }
+
   const target = date ?? getToday();
   const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date === target && u.counter.used > 0).length;
   const leads = store.leads.filter((item) => isSameDay(item.createdAt, target));
@@ -496,24 +505,25 @@ async function recordEventSupabase(
 async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   const supabase = getSupabaseAdmin();
   const target = date ?? getToday();
-  const range = dayRange(target);
+  const eventsQuery = supabase
+    .from("events")
+    .select("id, type, user_key, created_at, url, score, percentile, industry")
+    .order("created_at", { ascending: false });
+  const leadsQuery = supabase
+    .from("leads")
+    .select("id, user_key, created_at, url, score, percentile, industry, summary")
+    .order("created_at", { ascending: false });
+  const quotaQuery = supabase.from("user_daily_quotas").select("user_key").gt("used", 0);
+
+  if (!isAllDateScope(target)) {
+    const range = dayRange(target);
+    eventsQuery.gte("created_at", range.start).lt("created_at", range.end);
+    leadsQuery.gte("created_at", range.start).lt("created_at", range.end);
+    quotaQuery.eq("date", target);
+  }
 
   const [{ data: eventRows, error: eventError }, { data: leadRows, error: leadError }, { data: quotaRows, error: quotaError }] =
-    await Promise.all([
-      supabase
-        .from("events")
-        .select("id, type, user_key, created_at, url, score, percentile, industry")
-        .gte("created_at", range.start)
-        .lt("created_at", range.end)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("leads")
-        .select("id, user_key, created_at, url, score, percentile, industry, summary")
-        .gte("created_at", range.start)
-        .lt("created_at", range.end)
-        .order("created_at", { ascending: false }),
-      supabase.from("user_daily_quotas").select("user_key").eq("date", target).gt("used", 0),
-    ]);
+    await Promise.all([eventsQuery, leadsQuery, quotaQuery]);
 
   if (eventError || leadError || quotaError) {
     throw new Error("failed to load summary");
