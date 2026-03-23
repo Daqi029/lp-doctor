@@ -239,10 +239,10 @@ export default function Home() {
           </div>
 
           <h1 className="mt-4 max-w-3xl text-3xl font-semibold leading-tight tracking-tight md:text-5xl">
-            30秒找出影响网页转化的3个问题
+            30秒拿到3个最该优先修改的转化问题
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-[#5a6b92] md:text-base">
-            不只告诉你哪里有问题，还会明确先改哪三处、为什么先改、改完看什么。
+            输入你的 Landing Page 链接，立即拿到分数、问题判断，以及 3 个可直接推进的优化方向。
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 grid gap-3 md:grid-cols-[1fr_auto]">
@@ -264,7 +264,7 @@ export default function Home() {
               disabled={state.loading}
               className="h-13 rounded-2xl bg-[#1f355f] px-6 text-sm font-medium text-[#edf3ff] transition hover:bg-[#162745] disabled:cursor-not-allowed disabled:opacity-65"
             >
-              {state.loading ? "诊断中..." : "开始诊断"}
+              {state.loading ? "诊断中..." : "查看优先修改点"}
             </button>
           </form>
 
