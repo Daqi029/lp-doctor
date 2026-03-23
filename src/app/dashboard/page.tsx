@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 type SubmissionRow = {
   createdAt: string;
+  userKey: string;
   url: string;
   score: number | null;
   industry: string | null;
@@ -37,6 +38,34 @@ const tabs = [
 ] as const;
 
 const ALL_SCOPE = "all";
+
+function getLeadIntent(row: SubmissionRow): {
+  label: "高意向" | "值得跟进" | "普通";
+  tone: string;
+  rowTone: string;
+} {
+  if (row.copiedWechat) {
+    return {
+      label: "高意向",
+      tone: "border-[#b7d8c2] bg-[#ecfaf1] text-[#1b6a3f]",
+      rowTone: "bg-[#f3fcf6]",
+    };
+  }
+
+  if (row.downloadedReport || (row.score !== null && row.score < 60)) {
+    return {
+      label: "值得跟进",
+      tone: "border-[#f0d4a2] bg-[#fff7e8] text-[#9a6408]",
+      rowTone: "bg-[#fffbf1]",
+    };
+  }
+
+  return {
+    label: "普通",
+    tone: "border-[#d8e0f2] bg-[#f5f8ff] text-[#5b6f99]",
+    rowTone: "",
+  };
+}
 
 function formatScopeLabel(date: string): string {
   return date === ALL_SCOPE ? "全部历史数据" : date;
@@ -76,6 +105,11 @@ export default function DashboardPage() {
 
   const maxFunnelCount = useMemo(() => Math.max(...(data?.funnel.map((item) => item.count) || [1])), [data]);
   const metricLabelPrefix = data?.date === ALL_SCOPE ? "累计" : "当日";
+  const highIntentCount = useMemo(() => data?.submissions.filter((row) => row.copiedWechat).length ?? 0, [data]);
+  const followUpCount = useMemo(
+    () => data?.submissions.filter((row) => row.copiedWechat || row.downloadedReport || (row.score !== null && row.score < 60)).length ?? 0,
+    [data],
+  );
 
   function handleToday() {
     setDateInput(todayString);
@@ -181,6 +215,19 @@ export default function DashboardPage() {
                 <MetricCard label="额度用完" value={data.overview.quotaExceeded} />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-[#b7d8c2] bg-[#ecfaf1] p-4">
+                  <p className="text-xs font-semibold tracking-[0.08em] text-[#1b6a3f]">高意向线索</p>
+                  <p className="mt-2 text-3xl font-semibold text-[#154d2c]">{highIntentCount}</p>
+                  <p className="mt-2 text-sm text-[#2f6e46]">已复制微信，最值得你优先跟进。</p>
+                </div>
+                <div className="rounded-2xl border border-[#f0d4a2] bg-[#fff7e8] p-4">
+                  <p className="text-xs font-semibold tracking-[0.08em] text-[#9a6408]">值得跟进</p>
+                  <p className="mt-2 text-3xl font-semibold text-[#8a5a06]">{followUpCount}</p>
+                  <p className="mt-2 text-sm text-[#8a691e]">已下载报告，或分数低于 60，说明痛感已经出现。</p>
+                </div>
+              </div>
+
               <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-[#1d4684]">{data.date === ALL_SCOPE ? "历史线索列表" : "当日线索列表"}</h2>
@@ -194,23 +241,46 @@ export default function DashboardPage() {
                         <th className="px-3 py-3 font-medium">URL</th>
                         <th className="px-3 py-3 font-medium">分数</th>
                         <th className="px-3 py-3 font-medium">行业</th>
+                        <th className="px-3 py-3 font-medium">线索等级</th>
+                        <th className="px-3 py-3 font-medium">诊断报告</th>
                         <th className="px-3 py-3 font-medium">下载报告</th>
                         <th className="px-3 py-3 font-medium">复制微信</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data.submissions.map((row) => (
-                        <tr key={`${row.createdAt}-${row.url}`} className="border-b border-[#eef2fb] align-top text-[#2b3856]">
+                      {data.submissions.map((row) => {
+                        const intent = getLeadIntent(row);
+                        return (
+                        <tr key={`${row.createdAt}-${row.url}`} className={`border-b border-[#eef2fb] align-top text-[#2b3856] ${intent.rowTone}`}>
                           <td className="px-3 py-3 whitespace-nowrap">{new Date(row.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</td>
                           <td className="max-w-[360px] px-3 py-3">
                             <div className="truncate" title={row.url}>{row.url}</div>
                           </td>
                           <td className="px-3 py-3">{row.score ?? "-"}</td>
                           <td className="px-3 py-3">{row.industry ?? "-"}</td>
+                          <td className="px-3 py-3">
+                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${intent.tone}`}>
+                              {intent.label}
+                            </span>
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            {row.score !== null ? (
+                              <a
+                                href={`/api/dashboard-report?userKey=${encodeURIComponent(row.userKey)}&url=${encodeURIComponent(row.url)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex rounded-lg border border-[#cbd7f0] bg-[#f6f9ff] px-3 py-1.5 text-xs font-medium text-[#244783] transition hover:bg-[#eaf1ff]"
+                              >
+                                查看报告
+                              </a>
+                            ) : (
+                              <span className="text-xs text-[#8b98b5]">暂无</span>
+                            )}
+                          </td>
                           <td className="px-3 py-3">{row.downloadedReport ? "是" : "否"}</td>
                           <td className="px-3 py-3">{row.copiedWechat ? "是" : "否"}</td>
                         </tr>
-                      ))}
+                      )})}
                     </tbody>
                   </table>
                   {data.submissions.length === 0 ? (

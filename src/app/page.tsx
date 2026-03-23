@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { track } from "@vercel/analytics";
 import type { AnalyzeResponse, AnalyzeResult } from "@/lib/types";
+import { buildReportHtml } from "@/lib/report";
 
 type State = {
   loading: boolean;
@@ -16,9 +17,6 @@ type State = {
 };
 
 const WECHAT_ID = "daqi029";
-const CONSULTANT_NAME = "Mengqi";
-const CONSULTANT_TITLE = "增长设计顾问";
-const CONSULTANT_BIO = "专注于帮助 SaaS 和独立产品团队定位转化瓶颈，明确首屏表达、CTA 路径和说服结构的优先级。";
 
 const PROCESS_STAGES = ["首屏价值诊断完成", "方案区结构诊断完成", "价格区说服力诊断中", "信任背书诊断中", "CTA 链路诊断中"];
 const PROCESS_LOGS = [
@@ -42,15 +40,6 @@ function scoreTone(score: number): { text: string } {
   if (score < 60) return { text: "text-[#b42828]" };
   if (score < 80) return { text: "text-[#9a6a07]" };
   return { text: "text-[#13663f]" };
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
 
 export default function Home() {
@@ -218,79 +207,11 @@ export default function Home() {
       }),
     }).catch(() => undefined);
 
-    const reportHtml = `<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Landing Page 增长诊断报告</title>
-    <style>
-      body { margin: 0; background: #f4f6fb; color: #1f2c46; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; }
-      .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 64px; }
-      .card { background: #ffffff; border: 1px solid #d8e0f2; border-radius: 24px; padding: 28px; box-shadow: 0 18px 40px rgba(37, 59, 112, 0.08); }
-      .eyebrow { font-size: 12px; letter-spacing: 0.12em; color: #5b6f99; font-weight: 700; }
-      h1 { margin: 14px 0 8px; font-size: 34px; line-height: 1.2; color: #1d2f56; }
-      .sub { margin: 0; color: #516486; font-size: 15px; line-height: 1.8; }
-      .meta { display: grid; grid-template-columns: 130px 1fr; gap: 18px; margin-top: 28px; align-items: center; }
-      .score { width: 130px; height: 130px; border-radius: 999px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${state.result.score < 60 ? "#fde9e9" : state.result.score < 80 ? "#fff5dd" : "#e8f7ef"}; color: ${state.result.score < 60 ? "#b42828" : state.result.score < 80 ? "#9a6a07" : "#13663f"}; }
-      .score strong { font-size: 52px; line-height: 1; }
-      .score span { margin-top: 6px; font-size: 14px; color: #4f5f84; }
-      .summary { font-size: 24px; line-height: 1.5; font-weight: 700; color: #b42828; }
-      .industry { margin-top: 10px; color: #5d6d92; font-size: 14px; }
-      h2 { margin: 34px 0 14px; font-size: 24px; color: #1d4684; }
-      .suggestion { margin-top: 16px; background: #fff; border: 1px solid #dbe3f4; border-radius: 20px; padding: 22px; }
-      .action { margin: 0; font-size: 24px; line-height: 1.5; font-weight: 800; color: #b42828; }
-      .row { margin-top: 14px; font-size: 16px; line-height: 1.9; color: #32415f; }
-      .evidence { margin-top: 14px; padding: 10px 14px; background: #edf2ff; border-radius: 14px; color: #445b8d; font-size: 14px; line-height: 1.7; }
-      .footer { margin-top: 34px; background: linear-gradient(145deg, #1d2c56 0%, #26396f 58%, #192447 100%); color: #e7eeff; border-radius: 24px; padding: 28px; }
-      .footer h3 { margin: 0 0 10px; font-size: 28px; line-height: 1.3; }
-      .footer p { margin: 0; font-size: 15px; line-height: 1.9; color: #d6e0ff; }
-      .contact { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(214, 224, 255, 0.2); }
-      .contact strong { color: #fff; }
-    </style>
-  </head>
-  <body>
-    <div class="wrap">
-      <div class="card">
-        <div class="eyebrow">LANDINGPAGE 增长诊断报告</div>
-        <h1>3个改了就能见效的点</h1>
-        <p class="sub">URL：${escapeHtml(normalizeInputUrl(state.inputUrl))}</p>
-        <div class="meta">
-          <div class="score">
-            <strong>${state.result.score}</strong>
-            <span>/100分</span>
-          </div>
-          <div>
-            <div class="summary">${escapeHtml(state.result.summary)}</div>
-            <div class="industry">行业识别：${escapeHtml(state.result.industry)} · 超过 ${state.result.percentile}% 同行页面</div>
-          </div>
-        </div>
-
-        <h2>现在最该先改的 3 件事</h2>
-        ${state.result.suggestions
-          .map(
-            (item) => `<section class="suggestion">
-              <p class="action">${escapeHtml(item.action)}</p>
-              <p class="row"><strong>为什么要先改：</strong>${escapeHtml(item.issue)}</p>
-              <div class="evidence"><strong>表现：</strong>${escapeHtml(item.evidence)}</div>
-              <p class="row"><strong>影响：</strong>${escapeHtml(item.impact)}</p>
-            </section>`,
-          )
-          .join("")}
-      </div>
-
-      <div class="footer">
-        <div class="eyebrow" style="color:#b9c8f5;">人工深度诊断</div>
-        <h3>${escapeHtml(CONSULTANT_NAME)}｜${escapeHtml(CONSULTANT_TITLE)}</h3>
-        <p>${escapeHtml(CONSULTANT_BIO)}</p>
-        <div class="contact">
-          <p><strong>微信号：</strong>${escapeHtml(WECHAT_ID)}</p>
-          <p><strong>业务说明：</strong>我会亲自查看你的页面，直接告诉你哪段文案要改、CTA 怎么重写、结构顺序怎么调，并给你可执行的优先级方案。</p>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>`;
+    const reportHtml = buildReportHtml({
+      url: normalizeInputUrl(state.inputUrl),
+      result: state.result,
+      wechatId: WECHAT_ID,
+    });
 
     const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
     const fileUrl = URL.createObjectURL(blob);
@@ -499,28 +420,41 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="flex justify-center md:justify-end">
-              <button
-                type="button"
-                onClick={handleDownloadReport}
-                className="inline-flex animate-[pulse_2.6s_ease-in-out_infinite] items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
-              >
-                <span aria-hidden="true" className="text-base leading-none">↓</span>
-                下载这份诊断报告
-              </button>
+            <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
+              <p className="text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
+                这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
+              </p>
+              <div className="mt-4 flex justify-start">
+                <button
+                  type="button"
+                  onClick={handleDownloadReport}
+                  className="inline-flex animate-[pulse_2.6s_ease-in-out_infinite] items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">↓</span>
+                  下载完整诊断报告
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-[#dbe3f4] bg-white/90 px-5 py-4">
+              <p className="text-sm leading-6 text-[#516485]">
+                如果你只是想先保存结果，建议先下载报告。<br />
+                如果你已经准备继续推进，下面这一步会更适合你。
+              </p>
             </div>
 
             <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
               <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
                 <div>
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">人工深度诊断名额</p>
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
                   <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
-                    还想获取更加深入的优化方案？我会亲自看你的页面，并给你更具体的增长建议
+                    如果你准备继续推进，我可以直接告诉你先改哪一块最值
                   </h2>
                   <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#d8e2ff]">
-                    AI审核给你方向，专家诊断会根据你目前的业务规模和卡点告诉你“哪一段文案要改、CTA 怎么重写、结构顺序怎么调”并给你可执行的优先级方案。
+                    自动结果能帮你快速定位问题，但不会结合你当前的业务目标告诉你先改什么、为什么先改。人工诊断会进一步给出更具体的优先级判断、修改重点和推进方向。
                   </p>
-                  <p className="mt-2 text-sm text-[#b8c8f4]">每天仅人工深度查看 5 个页面，满额后顺延至明天。</p>
+                  <p className="mt-2 text-sm text-[#b8c8f4]">适合已经准备改版、投流或提升当前转化效率的项目。很多客户会先从一次诊断开始，再决定是否进入更深入的项目合作。</p>
                   <a
                     href="https://mengqi.cc"
                     target="_blank"
@@ -558,13 +492,13 @@ export default function Home() {
                           复制
                         </button>
                       </div>
-                      <p className="mt-1 text-xs text-[#c6d5fb]">点击按钮会自动复制微信号，并记录你的诊断结果给我做跟进。</p>
+                      <p className="mt-1 text-xs text-[#c6d5fb]">复制微信，继续深度诊断。把你的页面发我，我会基于当前结果继续往下看。</p>
                     </div>
                   </div>
                 </div>
               </div>
               {state.leadSent ? (
-                <p className="mt-3 text-sm text-[#d4defa]">已记录你的诊断请求，微信号已复制。添加后请备注“LP诊断”。</p>
+                <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。添加后请备注“LP诊断”，我会优先按这次结果继续往下看。</p>
               ) : null}
             </div>
 

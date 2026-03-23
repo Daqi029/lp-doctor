@@ -134,6 +134,7 @@ type DailySummary = {
   analyzeUsers: number;
   submissions: {
     createdAt: string;
+    userKey: string;
     url: string;
     score: number | null;
     industry: string | null;
@@ -297,18 +298,19 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
 
   const grouped = new Map<
     string,
-    { createdAt: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }
+    { createdAt: string; userKey: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }
   >();
 
   for (const entry of submitUrl) {
     const key = `${entry.userKey}:${entry.url || "unknown"}`;
     if (!grouped.has(key)) {
-      grouped.set(key, {
-        createdAt: entry.createdAt,
-        url: entry.url || "-",
-        score: null,
-        industry: null,
-        downloadedReport: false,
+        grouped.set(key, {
+          createdAt: entry.createdAt,
+          userKey: entry.userKey,
+          url: entry.url || "-",
+          score: null,
+          industry: null,
+          downloadedReport: false,
         copiedWechat: false,
       });
     }
@@ -410,6 +412,19 @@ async function getCachedResultSupabase(userKey: string, url: string): Promise<An
   const ageMs = Date.now() - new Date(data.created_at).getTime();
   if (ageMs > 24 * 60 * 60 * 1000) return null;
   return { ...(data.result as AnalyzeResult), source: "cache" };
+}
+
+async function getStoredResultSupabase(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = (await supabase
+    .from("cached_results")
+    .select("result")
+    .eq("user_key", userKey)
+    .eq("url", url)
+    .maybeSingle()) as { data: { result: AnalyzeResult } | null };
+
+  if (!data?.result) return null;
+  return data.result;
 }
 
 async function saveAnalyzeResultSupabase(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
@@ -554,6 +569,14 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   return buildDailySummary(target, events, leads, quotaRows?.length ?? 0);
 }
 
+async function getStoredResultLocal(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  const store = await readLocalStore();
+  const user = getLocalUserState(store, userKey);
+  const cached = user.cache[url];
+  if (!cached) return null;
+  return cached.result;
+}
+
 async function resetStoreSupabase(): Promise<void> {
   const supabase = getSupabaseAdmin();
   await Promise.all([
@@ -572,6 +595,11 @@ export async function getQuota(userKey: string): Promise<{ used: number; limit: 
 export async function getCachedResult(userKey: string, url: string): Promise<AnalyzeResult | null> {
   assertPersistentStorageConfigured();
   return hasSupabaseConfig() ? getCachedResultSupabase(userKey, url) : getCachedResultLocal(userKey, url);
+}
+
+export async function getStoredResult(userKey: string, url: string): Promise<AnalyzeResult | null> {
+  assertPersistentStorageConfigured();
+  return hasSupabaseConfig() ? getStoredResultSupabase(userKey, url) : getStoredResultLocal(userKey, url);
 }
 
 export async function saveAnalyzeResult(userKey: string, url: string, result: AnalyzeResult): Promise<void> {
