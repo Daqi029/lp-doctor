@@ -164,6 +164,16 @@ type EventPayload = {
   articlePosition?: number;
 };
 
+function isMissingArticleEventColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return (
+    message.includes("article_slug") ||
+    message.includes("article_label") ||
+    message.includes("article_position")
+  );
+}
+
 function isAllDateScope(date?: string): boolean {
   return date === "all";
 }
@@ -531,7 +541,7 @@ async function recordEventSupabase(
   payload: EventPayload,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
-  const { error } = await supabase.from("events").insert({
+  const eventRow = {
     user_key: userKey,
     type: payload.type,
     url: payload.url,
@@ -541,8 +551,24 @@ async function recordEventSupabase(
     article_slug: payload.articleSlug,
     article_label: payload.articleLabel,
     article_position: payload.articlePosition,
-  });
-  if (error) throw new Error("failed to record event");
+  };
+
+  const { error } = await supabase.from("events").insert(eventRow);
+  if (!error) return;
+
+  if (isMissingArticleEventColumnError(error)) {
+    const { error: fallbackError } = await supabase.from("events").insert({
+      user_key: userKey,
+      type: payload.type,
+      url: payload.url,
+      score: payload.score,
+      percentile: payload.percentile,
+      industry: payload.industry,
+    });
+    if (!fallbackError) return;
+  }
+
+  throw new Error("failed to record event");
 }
 
 async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
@@ -550,7 +576,7 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   const target = date ?? getToday();
   const eventsQuery = supabase
     .from("events")
-    .select("id, type, user_key, created_at, url, score, percentile, industry, article_slug, article_label, article_position")
+    .select("id, type, user_key, created_at, url, score, percentile, industry")
     .order("created_at", { ascending: false });
   const leadsQuery = supabase
     .from("leads")
@@ -581,9 +607,6 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
     score: row.score ?? undefined,
     percentile: row.percentile ?? undefined,
     industry: row.industry ?? undefined,
-    articleSlug: row.article_slug ?? undefined,
-    articleLabel: row.article_label ?? undefined,
-    articlePosition: row.article_position ?? undefined,
   }));
 
   const leads: LeadEntry[] = ((leadRows ?? []) as SupabaseLeadRow[]).map((row) => ({
