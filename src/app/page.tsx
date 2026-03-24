@@ -5,6 +5,7 @@ import Image from "next/image";
 import { track } from "@vercel/analytics";
 import type { AnalyzeResponse, AnalyzeResult } from "@/lib/types";
 import { buildReportHtml } from "@/lib/report";
+import { getRecommendedArticles } from "@/lib/articles";
 
 type State = {
   loading: boolean;
@@ -75,6 +76,7 @@ export default function Home() {
   const progress = Math.round(((stageIndex + 1) / PROCESS_STAGES.length) * 100);
 
   const scoreStyle = scoreTone(state.result?.score || 0);
+  const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -443,6 +445,35 @@ export default function Home() {
                 如果你已经准备继续推进，下面这一步会更适合你。
               </p>
             </div>
+
+            {recommendedArticles.length > 0 ? (
+              <div className="rounded-2xl border border-[#dbe3f4] bg-[#fbfcff] px-5 py-5">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改？先看这两篇</p>
+                  <h3 className="text-lg font-semibold text-[#1d2f56]">这两篇正好对应你这页最明显的问题</h3>
+                  <p className="text-sm leading-6 text-[#5a6b8d]">
+                    你可以先自己改一轮。<br />
+                    如果不想自己拆，直接加我微信，我会告诉你先改哪三处。
+                  </p>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {recommendedArticles.map((article) => (
+                    <a
+                      key={article.slug}
+                      href={article.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-2xl border border-[#d8e1f3] bg-white px-4 py-4 transition hover:border-[#b7c6e8] hover:bg-[#f9fbff]"
+                    >
+                      <p className="text-base font-semibold leading-7 text-[#1f355f]">{article.title}</p>
+                      <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
+                      <span className="mt-3 inline-flex text-sm font-medium text-[#244783]">先看这篇</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
               <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">

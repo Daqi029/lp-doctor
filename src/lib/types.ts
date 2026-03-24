@@ -1,4 +1,17 @@
 export type Suggestion = {
+  category:
+    | "value_clarity_first"
+    | "reduce_cognitive_load"
+    | "activation_path_visible"
+    | "outcome_over_feature"
+    | "trust_acceleration"
+    | "friction_kill"
+    | "positioning_density"
+    | "fallback_value_prop"
+    | "fallback_cta"
+    | "fallback_structure"
+    | "fallback_trust"
+    | "fallback_copy";
   title: string;
   issue: string;
   impact: string;

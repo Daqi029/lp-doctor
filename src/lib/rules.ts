@@ -336,6 +336,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("value_clarity_first", seedBase);
       candidates.push({
+        category: "value_clarity_first",
         ...variant,
         evidence: `你现在首屏最先让人看到的是“${headlinePreview}”，主按钮文案是“${ctaPreview}”。`,
         priority: "high",
@@ -349,6 +350,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("reduce_cognitive_load", seedBase);
       candidates.push({
+        category: "reduce_cognitive_load",
         ...variant,
         evidence: `这页里一共识别到 ${signals.headings.length} 个标题层级，主按钮大概有 ${signals.primaryCtas.length} 个。`,
         priority: "high",
@@ -362,6 +364,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("activation_path_visible", seedBase);
       candidates.push({
+        category: "activation_path_visible",
         ...variant,
         evidence: `按钮文案是“${ctaPreview}”，但页面里${containsAny(text, FLOW_WORDS) ? "已经提到了一些流程说明" : "还没怎么说点完之后会发生什么" }。`,
         priority: "high",
@@ -375,6 +378,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("outcome_over_feature", seedBase);
       candidates.push({
+        category: "outcome_over_feature",
         ...variant,
         evidence: `这页现在更偏在讲功能点（大概 ${featureDensity} 处），直接讲结果和收益的地方相对少一些（大概 ${outcomeDensity} 处）。`,
         priority: "high",
@@ -388,6 +392,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("trust_acceleration", seedBase);
       candidates.push({
+        category: "trust_acceleration",
         ...variant,
         evidence: `页面里${signals.hasTestimonial ? "有一些案例或评价" : "还没看到明显的案例或评价"}，${signals.hasLogoWall ? "也有客户背书" : "客户背书也不够明显"}。`,
         priority: "high",
@@ -401,6 +406,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("friction_kill", seedBase);
       candidates.push({
+        category: "friction_kill",
         ...variant,
         evidence: `这页总共识别到大约 ${signals.buttons.length} 个可点入口，其中主按钮大概有 ${signals.primaryCtas.length} 个。`,
         priority: "high",
@@ -414,6 +420,7 @@ function buildGrowthSuggestions(
     if (block) {
       const variant = pickSuggestionVariant("positioning_density", seedBase);
       candidates.push({
+        category: "positioning_density",
         ...variant,
         evidence: `页面里${containsAny(text, POSITIONING_WORDS) ? "有提到一些差异化表达" : "还没看到特别明确的差异化表达"}，文案整体也偏普通。`,
         priority: "high",
@@ -431,6 +438,7 @@ function buildGrowthSuggestions(
     .sort((a, b) => b.score - a.score)
     .slice(0, 3)
     .map((item) => ({
+      category: item.category,
       title: item.title,
       issue: item.issue,
       impact: item.impact,
@@ -460,6 +468,7 @@ function buildFallbackSuggestions(
     if (list.length >= 3) break;
     if (dim.key === "valueProp") {
       list.push({
+        category: "fallback_value_prop",
         title: "首屏这句话还不够好懂",
         issue: "用户看完首屏，还是不太明白你到底是帮谁、解决什么问题的。",
         impact: "第一眼没看懂，很多人就不会继续往下看。",
@@ -469,6 +478,7 @@ function buildFallbackSuggestions(
       });
     } else if (dim.key === "cta") {
       list.push({
+        category: "fallback_cta",
         title: "按钮有了，但下一步不够明确",
         issue: "用户知道你想让他点按钮，但不太清楚到底该点哪个、点了以后去哪里。",
         impact: "想点的人也会多犹豫一下，转化自然会掉。",
@@ -478,6 +488,7 @@ function buildFallbackSuggestions(
       });
     } else if (dim.key === "structure") {
       list.push({
+        category: "fallback_structure",
         title: "页面顺序有点乱，用户得自己拼重点",
         issue: "现在的内容顺序不够顺，用户得自己想一遍，才知道你想表达什么。",
         impact: "用户虽然可能会继续看，但行动意愿会在中间慢慢掉下去。",
@@ -487,6 +498,7 @@ function buildFallbackSuggestions(
       });
     } else if (dim.key === "trust") {
       list.push({
+        category: "fallback_trust",
         title: "还差一点让人放心下单的东西",
         issue: "页面里缺少让人放心的证据，比如案例、评价、客户背书这些。",
         impact: "用户会觉得“还行”，但不会马上行动。",
@@ -496,6 +508,7 @@ function buildFallbackSuggestions(
       });
     } else if (dim.key === "copy") {
       list.push({
+        category: "fallback_copy",
         title: "文案有点虚，像在讲概念",
         issue: "现在文案更像在说自己厉害，但没怎么说用户到底会得到什么。",
         impact: "看的人可能觉得你说得挺多，但记不住重点，也不容易被打动。",
