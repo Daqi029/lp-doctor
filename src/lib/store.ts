@@ -41,6 +41,7 @@ export type EventType =
   | "submit_url"
   | "result_generated"
   | "download_report"
+  | "click_article"
   | "copy_wechat"
   | "quota_exceeded";
 
@@ -53,6 +54,9 @@ type EventEntry = {
   score?: number;
   percentile?: number;
   industry?: string;
+  articleSlug?: string;
+  articleLabel?: string;
+  articlePosition?: number;
 };
 
 type SupabaseEventRow = {
@@ -64,6 +68,9 @@ type SupabaseEventRow = {
   score: number | null;
   percentile: number | null;
   industry: string | null;
+  article_slug: string | null;
+  article_label: string | null;
+  article_position: number | null;
 };
 
 type SupabaseLeadRow = {
@@ -123,6 +130,7 @@ type DailySummary = {
     submitUrl: number;
     resultGenerated: number;
     downloadReport: number;
+    articleClick: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -139,9 +147,21 @@ type DailySummary = {
     score: number | null;
     industry: string | null;
     downloadedReport: boolean;
+    articleClicks: number;
     copiedWechat: boolean;
   }[];
   leads: LeadEntry[];
+};
+
+type EventPayload = {
+  type: EventType;
+  url?: string;
+  score?: number;
+  percentile?: number;
+  industry?: string;
+  articleSlug?: string;
+  articleLabel?: string;
+  articlePosition?: number;
 };
 
 function isAllDateScope(date?: string): boolean {
@@ -269,13 +289,7 @@ async function createLeadLocal(userKey: string, payload: LeadPayload): Promise<L
 
 async function recordEventLocal(
   userKey: string,
-  payload: {
-    type: EventType;
-    url?: string;
-    score?: number;
-    percentile?: number;
-    industry?: string;
-  },
+  payload: EventPayload,
 ): Promise<void> {
   const store = await readLocalStore();
   store.events.unshift({
@@ -293,24 +307,35 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   const submitUrl = events.filter((item) => item.type === "submit_url");
   const resultGenerated = events.filter((item) => item.type === "result_generated");
   const downloadReport = events.filter((item) => item.type === "download_report");
+  const articleClick = events.filter((item) => item.type === "click_article");
   const copyWechat = events.filter((item) => item.type === "copy_wechat");
   const quotaExceeded = events.filter((item) => item.type === "quota_exceeded");
 
   const grouped = new Map<
     string,
-    { createdAt: string; userKey: string; url: string; score: number | null; industry: string | null; downloadedReport: boolean; copiedWechat: boolean }
+    {
+      createdAt: string;
+      userKey: string;
+      url: string;
+      score: number | null;
+      industry: string | null;
+      downloadedReport: boolean;
+      articleClicks: number;
+      copiedWechat: boolean;
+    }
   >();
 
   for (const entry of submitUrl) {
     const key = `${entry.userKey}:${entry.url || "unknown"}`;
     if (!grouped.has(key)) {
-        grouped.set(key, {
-          createdAt: entry.createdAt,
-          userKey: entry.userKey,
-          url: entry.url || "-",
-          score: null,
-          industry: null,
-          downloadedReport: false,
+      grouped.set(key, {
+        createdAt: entry.createdAt,
+        userKey: entry.userKey,
+        url: entry.url || "-",
+        score: null,
+        industry: null,
+        downloadedReport: false,
+        articleClicks: 0,
         copiedWechat: false,
       });
     }
@@ -328,6 +353,11 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   for (const entry of downloadReport) {
     const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.downloadedReport = true;
+  }
+
+  for (const entry of articleClick) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.articleClicks += 1;
   }
 
   for (const entry of copyWechat) {
@@ -356,6 +386,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
       submitUrl: submitUrl.length,
       resultGenerated: resultGenerated.length,
       downloadReport: downloadReport.length,
+      articleClick: articleClick.length,
       copyWechat: copyWechat.length,
       quotaExceeded: quotaExceeded.length,
     },
@@ -497,13 +528,7 @@ async function createLeadSupabase(userKey: string, payload: LeadPayload): Promis
 
 async function recordEventSupabase(
   userKey: string,
-  payload: {
-    type: EventType;
-    url?: string;
-    score?: number;
-    percentile?: number;
-    industry?: string;
-  },
+  payload: EventPayload,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from("events").insert({
@@ -513,6 +538,9 @@ async function recordEventSupabase(
     score: payload.score,
     percentile: payload.percentile,
     industry: payload.industry,
+    article_slug: payload.articleSlug,
+    article_label: payload.articleLabel,
+    article_position: payload.articlePosition,
   });
   if (error) throw new Error("failed to record event");
 }
@@ -522,7 +550,7 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   const target = date ?? getToday();
   const eventsQuery = supabase
     .from("events")
-    .select("id, type, user_key, created_at, url, score, percentile, industry")
+    .select("id, type, user_key, created_at, url, score, percentile, industry, article_slug, article_label, article_position")
     .order("created_at", { ascending: false });
   const leadsQuery = supabase
     .from("leads")
@@ -553,6 +581,9 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
     score: row.score ?? undefined,
     percentile: row.percentile ?? undefined,
     industry: row.industry ?? undefined,
+    articleSlug: row.article_slug ?? undefined,
+    articleLabel: row.article_label ?? undefined,
+    articlePosition: row.article_position ?? undefined,
   }));
 
   const leads: LeadEntry[] = ((leadRows ?? []) as SupabaseLeadRow[]).map((row) => ({
@@ -618,13 +649,7 @@ export async function createLead(userKey: string, payload: LeadPayload): Promise
 
 export async function recordEvent(
   userKey: string,
-  payload: {
-    type: EventType;
-    url?: string;
-    score?: number;
-    percentile?: number;
-    industry?: string;
-  },
+  payload: EventPayload,
 ): Promise<void> {
   assertPersistentStorageConfigured();
   if (hasSupabaseConfig()) {

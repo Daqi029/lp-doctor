@@ -9,6 +9,7 @@ type SubmissionRow = {
   score: number | null;
   industry: string | null;
   downloadedReport: boolean;
+  articleClicks: number;
   copiedWechat: boolean;
 };
 
@@ -20,6 +21,7 @@ type SummaryPayload = {
     submitUrl: number;
     resultGenerated: number;
     downloadReport: number;
+    articleClick: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -206,11 +208,12 @@ export default function DashboardPage() {
                   ? "。线上事件、线索和看板数据会持久保存。"
                   : "。当前不是持久化数据库，实例刷新后数据可能丢失。"}
               </div>
-              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+              <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-7">
                 <MetricCard label={`${metricLabelPrefix}访问`} value={data.overview.visitors} />
                 <MetricCard label="提交 URL" value={data.overview.submitUrl} />
                 <MetricCard label="生成结果" value={data.overview.resultGenerated} />
                 <MetricCard label="下载报告" value={data.overview.downloadReport} />
+                <MetricCard label="点击文章" value={data.overview.articleClick} />
                 <MetricCard label="复制微信" value={data.overview.copyWechat} />
                 <MetricCard label="额度用完" value={data.overview.quotaExceeded} />
               </div>
@@ -244,6 +247,7 @@ export default function DashboardPage() {
                         <th className="px-3 py-3 font-medium">线索等级</th>
                         <th className="px-3 py-3 font-medium">诊断报告</th>
                         <th className="px-3 py-3 font-medium">下载报告</th>
+                        <th className="px-3 py-3 font-medium">点击文章</th>
                         <th className="px-3 py-3 font-medium">复制微信</th>
                       </tr>
                     </thead>
@@ -278,6 +282,7 @@ export default function DashboardPage() {
                             )}
                           </td>
                           <td className="px-3 py-3">{row.downloadedReport ? "是" : "否"}</td>
+                          <td className="px-3 py-3">{row.articleClicks > 0 ? row.articleClicks : "-"}</td>
                           <td className="px-3 py-3">{row.copiedWechat ? "是" : "否"}</td>
                         </tr>
                       )})}

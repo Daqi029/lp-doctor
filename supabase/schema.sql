@@ -27,8 +27,13 @@ create table if not exists public.events (
   created_at timestamptz not null default now()
 );
 
+alter table public.events add column if not exists article_slug text;
+alter table public.events add column if not exists article_label text;
+alter table public.events add column if not exists article_position integer;
+
 create index if not exists idx_events_created_at on public.events (created_at desc);
 create index if not exists idx_events_type on public.events (type);
+create index if not exists idx_events_article_slug on public.events (article_slug);
 
 create table if not exists public.leads (
   id uuid primary key default gen_random_uuid(),

@@ -17,6 +17,9 @@ export async function POST(request: Request) {
       score?: number;
       percentile?: number;
       industry?: string;
+      articleSlug?: string;
+      articleLabel?: string;
+      articlePosition?: number;
     };
 
     if (!body.type) {
@@ -40,6 +43,9 @@ export async function POST(request: Request) {
       score: typeof body.score === "number" ? body.score : undefined,
       percentile: typeof body.percentile === "number" ? body.percentile : undefined,
       industry: body.industry,
+      articleSlug: body.articleSlug,
+      articleLabel: body.articleLabel,
+      articlePosition: typeof body.articlePosition === "number" ? body.articlePosition : undefined,
     });
 
     const response = NextResponse.json({ ok: true });

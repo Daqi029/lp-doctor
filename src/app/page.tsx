@@ -182,6 +182,36 @@ export default function Home() {
     setState((prev) => ({ ...prev, leadSent: true }));
   }
 
+  function handleClickArticle(article: { slug: string; label: string }, position: number) {
+    if (!state.result) return;
+
+    track("click_article", {
+      article_slug: article.slug,
+      article_label: article.label,
+      article_position: position,
+      url: normalizeInputUrl(state.inputUrl),
+      score: state.result.score,
+      percentile: state.result.percentile,
+      industry: state.result.industry,
+    });
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        type: "click_article",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+        articleSlug: article.slug,
+        articleLabel: article.label,
+        articlePosition: position,
+      }),
+    }).catch(() => undefined);
+  }
+
   async function handleDevReset() {
     const response = await fetch("/api/dev-reset", { method: "POST" });
     if (!response.ok) return;
@@ -439,36 +469,35 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[#dbe3f4] bg-white/90 px-5 py-4">
-              <p className="text-sm leading-6 text-[#516485]">
-                如果你只是想先保存结果，建议先下载报告。<br />
-                如果你已经准备继续推进，下面这一步会更适合你。
-              </p>
-            </div>
-
             {recommendedArticles.length > 0 ? (
-              <div className="rounded-2xl border border-[#dbe3f4] bg-[#fbfcff] px-5 py-5">
+              <div className="border-t border-[#dbe3f4] pt-5">
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改？先看这两篇</p>
-                  <h3 className="text-lg font-semibold text-[#1d2f56]">这两篇正好对应你这页最明显的问题</h3>
-                  <p className="text-sm leading-6 text-[#5a6b8d]">
-                    你可以先自己改一轮。<br />
-                    如果不想自己拆，直接加我微信，我会告诉你先改哪三处。
-                  </p>
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">📚 继续自己改</p>
+                  <h3 className="text-lg font-semibold text-[#1d2f56]">先看这两篇</h3>
+                  <p className="text-sm leading-6 text-[#5a6b8d]">这两篇正好对应你这页最明显的问题。</p>
                 </div>
 
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  {recommendedArticles.map((article) => (
+                  {recommendedArticles.map((article, index) => (
                     <a
                       key={article.slug}
                       href={article.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-2xl border border-[#d8e1f3] bg-white px-4 py-4 transition hover:border-[#b7c6e8] hover:bg-[#f9fbff]"
+                      onClick={() => handleClickArticle(article, index + 1)}
+                      className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
                     >
-                      <p className="text-base font-semibold leading-7 text-[#1f355f]">{article.title}</p>
-                      <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
-                      <span className="mt-3 inline-flex text-sm font-medium text-[#244783]">先看这篇</span>
+                      <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
+                        <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
+                      </div>
+                      <div className="px-4 py-4">
+                        <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
+                        <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
+                        <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
+                          打开文章
+                          <span aria-hidden="true">↗</span>
+                        </span>
+                      </div>
                     </a>
                   ))}
                 </div>
@@ -478,7 +507,7 @@ export default function Home() {
             <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
               <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
                 <div>
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">💬 继续深度诊断</p>
                   <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
                     如果你准备继续推进，我可以直接告诉你先改哪一块最值
                   </h2>
