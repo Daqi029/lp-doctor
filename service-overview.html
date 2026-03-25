@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MQ Studio 增长咨询服务说明</title>
+    <style>
+      :root {
+        --bg: #f3f1eb;
+        --paper: #ffffff;
+        --ink: #111111;
+        --muted: #666666;
+        --line: #ded9ce;
+        --soft: #f7f4ed;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+        line-height: 1.7;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        padding: 32px 0 48px;
+      }
+
+      .wrap {
+        width: min(900px, calc(100vw - 32px));
+        margin: 0 auto;
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        padding: 44px 46px 52px;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.05);
+      }
+
+      .logo {
+        margin: 0;
+        font-size: 64px;
+        line-height: 0.95;
+        font-weight: 900;
+        font-style: italic;
+        letter-spacing: -0.05em;
+        font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+      }
+
+      .eyebrow {
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 14px 0 10px;
+        font-size: 40px;
+        line-height: 1.12;
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0;
+        font-size: 16px;
+      }
+
+      .lead {
+        color: #333333;
+      }
+
+      .note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .rule {
+        height: 1px;
+        margin: 28px 0;
+        background: var(--line);
+      }
+
+      section + section {
+        margin-top: 30px;
+      }
+
+      .section-copy {
+        color: #333333;
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .pricing {
+        display: grid;
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 22px 22px 20px;
+        background: linear-gradient(180deg, #ffffff 0%, #faf8f2 100%);
+      }
+
+      .card-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 34px;
+        padding: 0 14px;
+        border: 1px solid #d6d0c4;
+        border-radius: 999px;
+        color: #494949;
+        background: #fcfbf8;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .price {
+        margin-top: 12px;
+        font-size: 42px;
+        line-height: 1;
+        font-weight: 900;
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        letter-spacing: -0.03em;
+      }
+
+      .price-note {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .subhead {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .two-col {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr 1fr;
+        margin-top: 16px;
+      }
+
+      .soft-box {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--soft);
+        padding: 18px;
+      }
+
+      .faq-item + .faq-item {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--line);
+      }
+
+      .faq-item strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 16px;
+      }
+
+      .footer {
+        margin-top: 28px;
+        border-radius: 20px;
+        background: #141414;
+        color: #faf8f2;
+        padding: 22px;
+      }
+
+      .footer a {
+        color: #faf8f2;
+        text-decoration: none;
+      }
+
+      @media (max-width: 720px) {
+        .wrap {
+          padding: 28px 22px 34px;
+        }
+
+        .logo {
+          font-size: 48px;
+        }
+
+        h1 {
+          font-size: 32px;
+        }
+
+        .price {
+          font-size: 34px;
+        }
+
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .card-head {
+          align-items: flex-start;
+          flex-direction: row;
+        }
+
+        .badge {
+          padding: 0 12px;
+          font-size: 11px;
+        }
+      }
+
+      @media print {
+        @page {
+          size: A4;
+          margin: 12mm;
+        }
+
+        html,
+        body {
+          background: #ffffff;
+        }
+
+        body {
+          padding: 0;
+        }
+
+        .wrap {
+          width: auto;
+          margin: 0;
+          padding: 0;
+          border: none;
+          border-radius: 0;
+          box-shadow: none;
+        }
+
+        .card,
+        .soft-box,
+        .footer {
+          break-inside: avoid;
+        }
+
+        .logo,
+        h1,
+        h2,
+        h3,
+        p,
+        li,
+        strong,
+        .badge,
+        .price,
+        .price-note,
+        .subhead {
+          color: #111111 !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        .footer,
+        .footer a {
+          color: #111111 !important;
+          background: transparent !important;
+          border: 1px solid var(--line);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <header>
+        <p class="logo">MQ Studio</p>
+        <p class="eyebrow">SERVICE OVERVIEW</p>
+        <h1>增长咨询服务说明</h1>
+        <p class="lead">
+          适合需要提升 Landing Page、关键页面和转化链路表现的项目。这不是泛泛咨询，而是围绕问题判断、优先级和推进顺序展开的增长合作。
+        </p>
+        <p class="note">
+          以下为参考价格。具体合作范围会根据产品阶段、页面数量和目标确认。
+        </p>
+      </header>
+
+      <div class="rule"></div>
+
+      <section>
+        <h2>这类服务适合什么情况</h2>
+        <p class="section-copy">
+          很多项目不是没有流量，而是没有先判断清楚问题到底卡在哪、为什么现在转化起不来、先改哪一块最值。我的服务重点不是给一堆泛泛建议，而是先帮你把问题边界和优先级梳清楚，再决定是做一次诊断、一个专项优化，还是长期顾问合作。
+        </p>
+        <ul>
+          <li>Landing Page 已经有流量，但转化表现不理想</li>
+          <li>Trial 到付费、激活率、扣费率或咨询率偏低</li>
+          <li>页面已经改过几轮，但效果还是不稳定</li>
+          <li>团队准备投入资源改版，但还没判断清楚先改什么</li>
+          <li>已经意识到问题存在，但缺少更有经验的外部判断</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>服务方式</h2>
+        <div class="pricing">
+          <article class="card">
+            <div class="card-head">
+              <h3>单次诊断</h3>
+              <span class="badge">先看清问题</span>
+            </div>
+            <div class="price">$599</div>
+            <div class="price-note">单次合作</div>
+            <p class="section-copy" style="margin-top: 10px;">
+              适合先把问题看清楚的项目。你已经有核心页面，但还没判断清楚问题到底卡在哪、先改什么最值。
+            </p>
+            <p class="section-copy" style="margin-top: 10px;">
+              我会先了解你的业务目标、用户路径和当前页面，再给出一份结构化诊断，明确问题边界、优先级和下一步动作。
+            </p>
+            <p class="subhead">服务包含</p>
+            <ul>
+              <li>1 次 1 对 1 深度沟通</li>
+              <li>1 份结构化诊断文档</li>
+              <li>当前页面核心问题判断</li>
+              <li>优先级建议：先改什么、为什么先改</li>
+              <li>下一步优化方向</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>专项优化项目</h3>
+              <span class="badge">大家的选择</span>
+            </div>
+            <div class="price">$1,200</div>
+            <div class="price-note">项目起步价</div>
+            <p class="section-copy" style="margin-top: 10px;">
+              适合围绕一个核心目标认真优化的项目。比如 Landing Page 转化、Trial 到付费、激活率、扣费率，或某个关键页面 / 关键链路表现不稳。
+            </p>
+            <p class="section-copy" style="margin-top: 10px;">
+              这类合作我会围绕一个核心问题深入拆解，给出更完整的判断、优化重点和执行顺序。
+            </p>
+            <p class="subhead">服务包含</p>
+            <ul>
+              <li>1 次深度访谈</li>
+              <li>1 份详细诊断报告</li>
+              <li>核心问题拆解</li>
+              <li>优化优先级判断</li>
+              <li>可执行修改建议</li>
+              <li>30 天行动计划</li>
+              <li>1 次报告解读 + 1 次答疑</li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h3>长期增长顾问</h3>
+              <span class="badge">长期合作</span>
+            </div>
+            <div class="price">定制报价</div>
+            <div class="price-note">按月合作</div>
+            <p class="section-copy" style="margin-top: 10px;">
+              适合需要持续判断和推进的团队。不是只看一次页面，而是作为外部增长伙伴持续参与判断优先级、发现问题和推进优化。
+            </p>
+            <p class="subhead">服务包含</p>
+            <ul>
+              <li>每月策略沟通</li>
+              <li>每周跟进与反馈</li>
+              <li>关键页面 / 链路持续诊断</li>
+              <li>优先级和推进建议</li>
+              <li>团队协作支持</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>典型交付内容</h2>
+        <div class="two-col">
+          <div class="soft-box">
+            <h3>你最终会拿到什么</h3>
+            <ul>
+              <li>问题到底卡在哪</li>
+              <li>为什么现在表现不理想</li>
+              <li>最影响结果的 3 个因素</li>
+              <li>哪些地方应该先改，哪些暂时先别动</li>
+              <li>修改顺序应该怎么排</li>
+            </ul>
+          </div>
+          <div class="soft-box">
+            <h3>更深合作通常会涉及</h3>
+            <ul>
+              <li>页面结构优化</li>
+              <li>CTA 设计与动线判断</li>
+              <li>信任建立和说服逻辑</li>
+              <li>文案方向与信息顺序</li>
+              <li>更完整的执行路线图</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>合作流程</h2>
+        <div class="two-col">
+          <div class="soft-box">
+            <h3>Step 1 - Step 2</h3>
+            <ul>
+              <li>提交当前页面、背景信息和核心问题</li>
+              <li>先沟通业务目标、用户路径和当前表现</li>
+            </ul>
+          </div>
+          <div class="soft-box">
+            <h3>Step 3 - Step 4</h3>
+            <ul>
+              <li>我完成诊断 / 拆解 / 方案整理</li>
+              <li>交付报告，并同步说明优先级和下一步动作</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>一般建议怎么开始</h2>
+        <p class="section-copy">
+          如果你现在最大的困惑是“知道页面有问题，但还没判断清楚先改哪块”，通常建议先从 <strong>单次诊断</strong> 开始。<br />
+          如果你的问题已经比较明确，比如 Landing Page 转化、Trial 到付费或某个关键页面 / 链路优化，更适合直接进入 <strong>专项优化项目</strong>。<br />
+          如果你已经有团队，且需要持续看增长和转化问题，则更适合 <strong>长期增长顾问</strong>。
+        </p>
+      </section>
+
+      <section>
+        <h2>FAQ</h2>
+        <div class="faq-item">
+          <strong>如果我还不确定问题在哪，应该选哪一档？</strong>
+          <p>通常建议先从单次诊断开始。先把问题边界和优先级梳清楚，再决定要不要进入更深合作。</p>
+        </div>
+        <div class="faq-item">
+          <strong>单次诊断和专项优化项目的区别是什么？</strong>
+          <p>单次诊断更适合先看清问题、确认方向。专项优化项目更适合问题已经比较明确，需要围绕一个核心目标认真推进优化。</p>
+        </div>
+        <div class="faq-item">
+          <strong>你会直接帮我们做设计或开发吗？</strong>
+          <p>我的核心价值在于判断问题、梳理优先级和给出优化方向。是否包含更深入的执行支持，会根据合作范围单独确认。</p>
+        </div>
+        <div class="faq-item">
+          <strong>周期一般多久？</strong>
+          <p>会根据项目范围确认。单次诊断通常更快，专项优化和长期顾问则根据合作深度安排。</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <h2 style="margin-bottom: 10px; color: #faf8f2;">联系方式</h2>
+        <p>如果你想先聊聊当前项目适合哪种合作方式，可以直接联系我。</p>
+        <p style="margin-top: 12px;">Website: <a href="https://mengqi.cc">mengqi.cc</a></p>
+        <p>LP Diagnosis Tool: <a href="https://lp.mengqi.cc">lp.mengqi.cc</a></p>
+        <p>WeChat: daqi029</p>
+      </footer>
+    </main>
+  </body>
+</html>
