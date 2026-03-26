@@ -18,6 +18,17 @@ type State = {
 };
 
 const WECHAT_ID = "daqi029";
+const SOCIAL_PROOF = {
+  visits: 161,
+  submissions: 99,
+  countries: [
+    { flag: "🇺🇸", name: "美国" },
+    { flag: "🇨🇳", name: "中国" },
+    { flag: "🇸🇬", name: "新加坡" },
+    { flag: "🇭🇰", name: "香港" },
+    { flag: "🇯🇵", name: "日本" },
+  ],
+};
 
 const PROCESS_STAGES = ["首屏价值诊断完成", "方案区结构诊断完成", "价格区说服力诊断中", "信任背书诊断中", "CTA 链路诊断中"];
 const PROCESS_LOGS = [
@@ -302,7 +313,8 @@ export default function Home() {
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#536283]">
             <span>{state.quotaText}</span>
-            <span>已被 50+ 独立开发者 / 创业者使用和验证</span>
+            <span>已有 {SOCIAL_PROOF.submissions} 个页面提交诊断</span>
+            <span>累计访问 {SOCIAL_PROOF.visits} 次</span>
             {isLocalEnv ? (
               <button
                 type="button"
@@ -312,6 +324,18 @@ export default function Home() {
                 重置本地额度
               </button>
             ) : null}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#617294]">
+            <span className="font-medium text-[#506187]">最近访问来源：</span>
+            {SOCIAL_PROOF.countries.map((country) => (
+              <span
+                key={country.name}
+                className="rounded-full border border-[#d4ddf2] bg-white/80 px-3 py-1 text-[#5a6b92]"
+              >
+                <span className="mr-1.5">{country.flag}</span>
+                {country.name}
+              </span>
+            ))}
           </div>
           {state.error ? (
             <p className="mt-4 rounded-xl border border-[#d58b8b] bg-[#fff5f5] px-4 py-3 text-sm text-[#a33b3b]">{state.error}</p>
