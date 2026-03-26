@@ -313,8 +313,6 @@ export default function Home() {
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[#536283]">
             <span>{state.quotaText}</span>
-            <span>已有 {SOCIAL_PROOF.submissions} 个页面提交诊断</span>
-            <span>累计访问 {SOCIAL_PROOF.visits} 次</span>
             {isLocalEnv ? (
               <button
                 type="button"
@@ -325,18 +323,6 @@ export default function Home() {
               </button>
             ) : null}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[#617294]">
-            <span className="font-medium text-[#506187]">最近访问来源：</span>
-            {SOCIAL_PROOF.countries.map((country) => (
-              <span
-                key={country.name}
-                className="rounded-full border border-[#d4ddf2] bg-white/80 px-3 py-1 text-[#5a6b92]"
-              >
-                <span className="mr-1.5">{country.flag}</span>
-                {country.name}
-              </span>
-            ))}
-          </div>
           {state.error ? (
             <p className="mt-4 rounded-xl border border-[#d58b8b] bg-[#fff5f5] px-4 py-3 text-sm text-[#a33b3b]">{state.error}</p>
           ) : null}
@@ -344,20 +330,33 @@ export default function Home() {
 
         <section ref={diagnosisSectionRef} className="mt-7 min-h-8">
         {!state.loading && !state.result && !state.quotaExceeded ? (
-          <section className="mt-7 rounded-3xl border border-[#d9dff0] bg-white/85 p-6">
+          <>
+          <section className="mt-3 rounded-3xl border border-[#d8dff1] bg-white/92 p-5 shadow-[0_14px_28px_rgba(55,79,132,0.06)]">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight text-[#203762] md:text-xl">
+                已有 {SOCIAL_PROOF.submissions} 个页面提交了诊断
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[#5f7197]">
+                提交页面来自 <span className="mr-1">🇺🇸</span>美国、<span className="mr-1">🇨🇳</span>中国、<span className="mr-1">🇸🇬</span>新加坡、<span className="mr-1">🇭🇰</span>香港、<span className="mr-1">🇯🇵</span>日本等市场。
+              </p>
+            </div>
+          </section>
+
+          <section className="mt-4 rounded-3xl border border-[#d9dff0] bg-white/85 p-6">
             <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">客户反馈</p>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-sm text-[#394765]">
+              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-[15px] leading-7 text-[#394765]">
                 “我们调整首屏文案后，注册转化明显提升。”
               </blockquote>
-              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-sm text-[#394765]">
+              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-[15px] leading-7 text-[#394765]">
                 “第一次有人这么直接指出我们页面真正的问题。”
               </blockquote>
-              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-sm text-[#394765]">
-                “改了 CTA 和信任区后，咨询转化明显变好。”
+              <blockquote className="rounded-2xl border border-[#d7dff0] bg-[#f7f9ff] p-4 text-[15px] leading-7 text-[#394765]">
+                “改了 CTA 和信任区后，成交转化明显变好。”
               </blockquote>
             </div>
           </section>
+          </>
         ) : null}
 
         {state.loading ? (
