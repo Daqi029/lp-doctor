@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { createLead, makeUserKey, recordEvent } from "@/lib/store";
+import { createLead, makeUserKey, recordEvent, type DeviceType } from "@/lib/store";
 import { notifyFeishuLead } from "@/lib/notify";
 import type { LeadPayload } from "@/lib/types";
 
@@ -8,6 +8,14 @@ function getClientIp(h: Headers): string {
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return h.get("x-real-ip") || "unknown-ip";
+}
+
+function detectDeviceType(userAgent: string): DeviceType {
+  const ua = userAgent.toLowerCase();
+  if (/ipad|tablet/.test(ua)) return "tablet";
+  if (/mobi|android|iphone|ipod|mobile/.test(ua)) return "mobile";
+  if (ua) return "desktop";
+  return "unknown";
 }
 
 export async function POST(request: Request) {
@@ -26,6 +34,7 @@ export async function POST(request: Request) {
       headerStore.get("user-agent") || "unknown-ua",
       anonId,
     );
+    const deviceType = detectDeviceType(headerStore.get("user-agent") || "");
 
     const payload: LeadPayload = {
       url: body.url,
@@ -38,6 +47,7 @@ export async function POST(request: Request) {
     await createLead(userKey, payload);
     await recordEvent(userKey, {
       type: "copy_wechat",
+      deviceType,
       url: payload.url,
       score: payload.score,
       percentile: payload.percentile,

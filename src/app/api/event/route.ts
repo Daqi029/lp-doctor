@@ -1,12 +1,20 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
-import { makeUserKey, normalizeUrl, recordEvent, type EventType } from "@/lib/store";
+import { makeUserKey, normalizeUrl, recordEvent, type DeviceType, type EventType } from "@/lib/store";
 
 function getClientIp(h: Headers): string {
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return h.get("x-real-ip") || "unknown-ip";
+}
+
+function detectDeviceType(userAgent: string): DeviceType {
+  const ua = userAgent.toLowerCase();
+  if (/ipad|tablet/.test(ua)) return "tablet";
+  if (/mobi|android|iphone|ipod|mobile/.test(ua)) return "mobile";
+  if (ua) return "desktop";
+  return "unknown";
 }
 
 export async function POST(request: Request) {
@@ -36,9 +44,11 @@ export async function POST(request: Request) {
       headerStore.get("user-agent") || "unknown-ua",
       anonId,
     );
+    const deviceType = detectDeviceType(headerStore.get("user-agent") || "");
 
     await recordEvent(userKey, {
       type: body.type,
+      deviceType,
       url: body.url ? normalizeUrl(body.url) : undefined,
       score: typeof body.score === "number" ? body.score : undefined,
       percentile: typeof body.percentile === "number" ? body.percentile : undefined,

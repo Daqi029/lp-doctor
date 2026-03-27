@@ -2,13 +2,47 @@ import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { analyzeLandingPage } from "@/lib/rules";
-import { getCachedResult, getQuota, makeUserKey, normalizeUrl, recordEvent, saveAnalyzeResult } from "@/lib/store";
+import { getCachedResult, getQuota, makeUserKey, normalizeUrl, recordEvent, saveAnalyzeResult, type DeviceType } from "@/lib/store";
 import type { AnalyzeResponse } from "@/lib/types";
 
 function getClientIp(h: Headers): string {
   const forwarded = h.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return h.get("x-real-ip") || "unknown-ip";
+}
+
+function detectDeviceType(userAgent: string): DeviceType {
+  const ua = userAgent.toLowerCase();
+  if (/ipad|tablet/.test(ua)) return "tablet";
+  if (/mobi|android|iphone|ipod|mobile/.test(ua)) return "mobile";
+  if (ua) return "desktop";
+  return "unknown";
+}
+
+function toUserFriendlyMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (/fetch failed/i.test(message)) {
+    return "这个链接打不开，请检查网址有没有写对。";
+  }
+
+  if (/页面抓取失败（404）/.test(message)) {
+    return "这个页面不存在，请检查链接有没有写错。";
+  }
+
+  if (/页面抓取失败（403|401）/.test(message)) {
+    return "这个页面暂时不让外部访问，我现在还读不到它。";
+  }
+
+  if (/页面抓取失败（5\d\d）/.test(message)) {
+    return "这个网站现在有点不稳定，稍后再试一次。";
+  }
+
+  if (/页面抓取失败/.test(message)) {
+    return "这个页面暂时抓不到，你可以检查一下链接，或者稍后再试。";
+  }
+
+  return "这次没读到这个页面，你可以检查一下链接，或者稍后再试。";
 }
 
 export async function POST(request: Request) {
@@ -40,13 +74,15 @@ export async function POST(request: Request) {
       headerStore.get("user-agent") || "unknown-ua",
       anonId,
     );
+    const deviceType = detectDeviceType(headerStore.get("user-agent") || "");
 
-    await recordEvent(userKey, { type: "submit_url", url: normalized });
+    await recordEvent(userKey, { type: "submit_url", deviceType, url: normalized });
 
     const cached = await getCachedResult(userKey, normalized);
     if (cached) {
       await recordEvent(userKey, {
         type: "result_generated",
+        deviceType,
         url: normalized,
         score: cached.score,
         percentile: cached.percentile,
@@ -64,7 +100,7 @@ export async function POST(request: Request) {
 
     const quota = await getQuota(userKey);
     if (quota.remaining <= 0) {
-      await recordEvent(userKey, { type: "quota_exceeded", url: normalized });
+      await recordEvent(userKey, { type: "quota_exceeded", deviceType, url: normalized });
       const response = NextResponse.json<AnalyzeResponse>(
         {
           ok: false,
@@ -81,6 +117,7 @@ export async function POST(request: Request) {
     await saveAnalyzeResult(userKey, normalized, result);
     await recordEvent(userKey, {
       type: "result_generated",
+      deviceType,
       url: normalized,
       score: result.score,
       percentile: result.percentile,
@@ -92,7 +129,7 @@ export async function POST(request: Request) {
     response.cookies.set("lp_anon_id", anonId, { httpOnly: true, maxAge: 60 * 60 * 24 * 365, path: "/" });
     return response;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "诊断失败，请稍后重试";
+    const message = toUserFriendlyMessage(error);
     return NextResponse.json<AnalyzeResponse>({ ok: false, message }, { status: 500 });
   }
 }

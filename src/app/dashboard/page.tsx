@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 type SubmissionRow = {
   createdAt: string;
   userKey: string;
+  deviceType: "mobile" | "desktop" | "tablet" | "unknown";
   url: string;
   score: number | null;
   industry: string | null;
@@ -25,6 +26,11 @@ type SummaryPayload = {
     copyWechat: number;
     quotaExceeded: number;
   };
+  deviceMetrics: {
+    mobile: DeviceMetrics;
+    desktop: DeviceMetrics;
+    tablet: DeviceMetrics;
+  };
   funnel: {
     label: string;
     count: number;
@@ -34,8 +40,21 @@ type SummaryPayload = {
   submissions: SubmissionRow[];
 };
 
+type DeviceMetrics = {
+  visitors: number;
+  visitShare: number;
+  submitUrl: number;
+  submitRate: number | null;
+  resultGenerated: number;
+  downloadReport: number;
+  downloadRate: number | null;
+  copyWechat: number;
+  copyRate: number | null;
+};
+
 const tabs = [
   { id: "data", label: "数据" },
+  { id: "device", label: "设备表现" },
   { id: "funnel", label: "图形漏斗" },
 ] as const;
 
@@ -103,6 +122,12 @@ function getLeadIntent(row: SubmissionRow): {
 
 function formatScopeLabel(date: string): string {
   return date === ALL_SCOPE ? "全部历史数据" : date;
+}
+
+function deviceLabel(device: "mobile" | "desktop" | "tablet"): string {
+  if (device === "mobile") return "移动端";
+  if (device === "desktop") return "桌面端";
+  return "平板";
 }
 
 export default function DashboardPage() {
@@ -280,6 +305,7 @@ export default function DashboardPage() {
                       <tr className="border-b border-[#e5eaf6]">
                         <th className="px-3 py-3 font-medium">时间</th>
                         <th className="px-3 py-3 font-medium">URL</th>
+                        <th className="px-3 py-3 font-medium">设备</th>
                         <th className="px-3 py-3 font-medium">分数</th>
                         <th className="px-3 py-3 font-medium">行业</th>
                         <th className="px-3 py-3 font-medium">线索等级</th>
@@ -301,6 +327,7 @@ export default function DashboardPage() {
                           <td className="max-w-[360px] px-3 py-3">
                             <div className="truncate" title={row.url}>{row.url}</div>
                           </td>
+                          <td className="px-3 py-3">{row.deviceType === "mobile" ? "移动端" : row.deviceType === "desktop" ? "桌面端" : row.deviceType === "tablet" ? "平板" : "-"}</td>
                           <td className="px-3 py-3">{row.score ?? "-"}</td>
                           <td className="px-3 py-3">{row.industry ?? "-"}</td>
                           <td className="px-3 py-3">
@@ -335,6 +362,43 @@ export default function DashboardPage() {
                     <p className="px-3 py-6 text-sm text-[#6b7a9d]">{data.date === ALL_SCOPE ? "还没有历史提交数据。" : "这个日期还没有提交数据。"}</p>
                   ) : null}
                 </div>
+              </div>
+            </div>
+          ) : null}
+
+          {!loading && data && activeTab === "device" ? (
+            <div className="mt-8 rounded-2xl border border-[#d7dff0] bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-[#1d4684]">设备表现</h2>
+                  <p className="mt-1 text-sm text-[#5b6f99]">看移动端占比，以及移动端和桌面端在提交、下载、复制微信上的差异。</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                {(["mobile", "desktop", "tablet"] as const).map((device) => {
+                  const metric = data.deviceMetrics[device];
+                  return (
+                    <div key={device} className="rounded-2xl border border-[#e1e7f5] bg-[#fbfcff] p-4">
+                      <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">{deviceLabel(device)}</p>
+                      <p className="mt-2 text-2xl font-semibold text-[#1d2f56]">{metric.visitors}</p>
+                      <p className="mt-1 text-sm text-[#5b6f99]">访问占比 {metric.visitShare}%</p>
+                      <div className="mt-4 space-y-2 text-sm text-[#394765]">
+                        <div className="flex items-center justify-between gap-3">
+                          <span>提交率</span>
+                          <span className="font-semibold text-[#1d2f56]">{metric.submitRate ?? "-"}%</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>下载率</span>
+                          <span className="font-semibold text-[#1d2f56]">{metric.downloadRate ?? "-"}%</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                          <span>复制微信率</span>
+                          <span className="font-semibold text-[#1d2f56]">{metric.copyRate ?? "-"}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : null}

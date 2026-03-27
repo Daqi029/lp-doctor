@@ -45,11 +45,14 @@ export type EventType =
   | "copy_wechat"
   | "quota_exceeded";
 
+export type DeviceType = "mobile" | "desktop" | "tablet" | "unknown";
+
 type EventEntry = {
   id: string;
   type: EventType;
   userKey: string;
   createdAt: string;
+  deviceType?: DeviceType;
   url?: string;
   score?: number;
   percentile?: number;
@@ -64,6 +67,7 @@ type SupabaseEventRow = {
   type: string;
   user_key: string;
   created_at: string;
+  device_type: DeviceType | null;
   url: string | null;
   score: number | null;
   percentile: number | null;
@@ -134,6 +138,11 @@ type DailySummary = {
     copyWechat: number;
     quotaExceeded: number;
   };
+  deviceMetrics: {
+    mobile: DevicePerformance;
+    desktop: DevicePerformance;
+    tablet: DevicePerformance;
+  };
   funnel: {
     label: string;
     count: number;
@@ -143,6 +152,7 @@ type DailySummary = {
   submissions: {
     createdAt: string;
     userKey: string;
+    deviceType: DeviceType;
     url: string;
     score: number | null;
     industry: string | null;
@@ -153,8 +163,21 @@ type DailySummary = {
   leads: LeadEntry[];
 };
 
+type DevicePerformance = {
+  visitors: number;
+  visitShare: number;
+  submitUrl: number;
+  submitRate: number | null;
+  resultGenerated: number;
+  downloadReport: number;
+  downloadRate: number | null;
+  copyWechat: number;
+  copyRate: number | null;
+};
+
 type EventPayload = {
   type: EventType;
+  deviceType?: DeviceType;
   url?: string;
   score?: number;
   percentile?: number;
@@ -172,6 +195,12 @@ function isMissingArticleEventColumnError(error: unknown): boolean {
     message.includes("article_label") ||
     message.includes("article_position")
   );
+}
+
+function isMissingDeviceTypeColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = "message" in error && typeof error.message === "string" ? error.message : "";
+  return message.includes("device_type");
 }
 
 function isAllDateScope(date?: string): boolean {
@@ -326,6 +355,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     {
       createdAt: string;
       userKey: string;
+      deviceType: DeviceType;
       url: string;
       score: number | null;
       industry: string | null;
@@ -341,6 +371,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
       grouped.set(key, {
         createdAt: entry.createdAt,
         userKey: entry.userKey,
+        deviceType: entry.deviceType || "unknown",
         url: entry.url || "-",
         score: null,
         industry: null,
@@ -375,8 +406,31 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     if (current) current.copiedWechat = true;
   }
 
+  const allVisitorKeys = new Set(pageViews.map((item) => item.userKey));
+  const totalVisitors = allVisitorKeys.size;
+  const buildDevicePerformance = (device: DeviceType): DevicePerformance => {
+    const devicePageViews = pageViews.filter((item) => item.deviceType === device);
+    const deviceVisitors = new Set(devicePageViews.map((item) => item.userKey)).size;
+    const deviceSubmit = submitUrl.filter((item) => item.deviceType === device).length;
+    const deviceResult = resultGenerated.filter((item) => item.deviceType === device).length;
+    const deviceDownload = downloadReport.filter((item) => item.deviceType === device).length;
+    const deviceCopy = copyWechat.filter((item) => item.deviceType === device).length;
+
+    return {
+      visitors: deviceVisitors,
+      visitShare: totalVisitors === 0 ? 0 : Math.round((deviceVisitors / totalVisitors) * 100),
+      submitUrl: deviceSubmit,
+      submitRate: deviceVisitors === 0 ? null : Math.round((deviceSubmit / deviceVisitors) * 100),
+      resultGenerated: deviceResult,
+      downloadReport: deviceDownload,
+      downloadRate: deviceResult === 0 ? null : Math.round((deviceDownload / deviceResult) * 100),
+      copyWechat: deviceCopy,
+      copyRate: deviceResult === 0 ? null : Math.round((deviceCopy / deviceResult) * 100),
+    };
+  };
+
   const funnelCounts = [
-    { label: "访问", count: new Set(pageViews.map((item) => item.userKey)).size },
+    { label: "访问", count: totalVisitors },
     { label: "提交 URL", count: submitUrl.length },
     { label: "生成结果", count: resultGenerated.length },
     { label: "下载报告", count: downloadReport.length },
@@ -392,13 +446,18 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     date,
     storageMode: getStorageMode(),
     overview: {
-      visitors: new Set(pageViews.map((item) => item.userKey)).size,
+      visitors: totalVisitors,
       submitUrl: submitUrl.length,
       resultGenerated: resultGenerated.length,
       downloadReport: downloadReport.length,
       articleClick: articleClick.length,
       copyWechat: copyWechat.length,
       quotaExceeded: quotaExceeded.length,
+    },
+    deviceMetrics: {
+      mobile: buildDevicePerformance("mobile"),
+      desktop: buildDevicePerformance("desktop"),
+      tablet: buildDevicePerformance("tablet"),
     },
     funnel,
     analyzeUsers,
@@ -544,6 +603,7 @@ async function recordEventSupabase(
   const eventRow = {
     user_key: userKey,
     type: payload.type,
+    device_type: payload.deviceType,
     url: payload.url,
     score: payload.score,
     percentile: payload.percentile,
@@ -556,7 +616,7 @@ async function recordEventSupabase(
   const { error } = await supabase.from("events").insert(eventRow);
   if (!error) return;
 
-  if (isMissingArticleEventColumnError(error)) {
+  if (isMissingArticleEventColumnError(error) || isMissingDeviceTypeColumnError(error)) {
     const { error: fallbackError } = await supabase.from("events").insert({
       user_key: userKey,
       type: payload.type,
@@ -576,7 +636,7 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   const target = date ?? getToday();
   const eventsQuery = supabase
     .from("events")
-    .select("id, type, user_key, created_at, url, score, percentile, industry")
+    .select("id, type, user_key, created_at, device_type, url, score, percentile, industry")
     .order("created_at", { ascending: false });
   const leadsQuery = supabase
     .from("leads")
@@ -594,15 +654,28 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
   const [{ data: eventRows, error: eventError }, { data: leadRows, error: leadError }, { data: quotaRows, error: quotaError }] =
     await Promise.all([eventsQuery, leadsQuery, quotaQuery]);
 
-  if (eventError || leadError || quotaError) {
+  if ((eventError && !isMissingDeviceTypeColumnError(eventError)) || leadError || quotaError) {
     throw new Error("failed to load summary");
   }
 
-  const events: EventEntry[] = ((eventRows ?? []) as SupabaseEventRow[]).map((row) => ({
+  let safeEventRows = (eventRows ?? []) as SupabaseEventRow[];
+  if (eventError && isMissingDeviceTypeColumnError(eventError)) {
+    const { data: legacyRows, error: legacyError } = await supabase
+      .from("events")
+      .select("id, type, user_key, created_at, url, score, percentile, industry")
+      .order("created_at", { ascending: false });
+    if (legacyError) {
+      throw new Error("failed to load summary");
+    }
+    safeEventRows = (legacyRows ?? []).map((row) => ({ ...(row as SupabaseEventRow), device_type: null }));
+  }
+
+  const events: EventEntry[] = safeEventRows.map((row) => ({
     id: row.id,
     type: row.type as EventType,
     userKey: row.user_key,
     createdAt: row.created_at,
+    deviceType: row.device_type ?? "unknown",
     url: row.url ?? undefined,
     score: row.score ?? undefined,
     percentile: row.percentile ?? undefined,
