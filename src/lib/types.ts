@@ -25,6 +25,7 @@ export type AnalyzeResult = {
   percentile: number;
   industry: "SaaS" | "Ecommerce" | "Info" | "General";
   summary: string;
+  specialMode?: "internal" | "reference";
   previewImage?: string | null;
   suggestions: Suggestion[];
   dimensions: {

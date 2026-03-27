@@ -21,13 +21,6 @@ const WECHAT_ID = "daqi029";
 const SOCIAL_PROOF = {
   visits: 161,
   submissions: 99,
-  countries: [
-    { flag: "🇺🇸", name: "美国" },
-    { flag: "🇨🇳", name: "中国" },
-    { flag: "🇸🇬", name: "新加坡" },
-    { flag: "🇭🇰", name: "香港" },
-    { flag: "🇯🇵", name: "日本" },
-  ],
 };
 
 const PROCESS_STAGES = ["首屏价值诊断完成", "方案区结构诊断完成", "价格区说服力诊断中", "信任背书诊断中", "CTA 链路诊断中"];
@@ -88,6 +81,7 @@ export default function Home() {
 
   const scoreStyle = scoreTone(state.result?.score || 0);
   const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
+  const isSpecialResult = Boolean(state.result?.specialMode);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -337,7 +331,7 @@ export default function Home() {
                 已有 {SOCIAL_PROOF.submissions} 个页面提交了诊断
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#5f7197]">
-                提交页面来自 <span className="mr-1">🇺🇸</span>美国、<span className="mr-1">🇨🇳</span>中国、<span className="mr-1">🇸🇬</span>新加坡、<span className="mr-1">🇭🇰</span>香港、<span className="mr-1">🇯🇵</span>日本等市场。
+                提交页面来自美国、中国、新加坡、香港、日本等市场。
               </p>
             </div>
           </section>
@@ -442,163 +436,173 @@ export default function Home() {
 
         {state.result && !state.quotaExceeded ? (
           <section className="mt-8 space-y-5 rounded-3xl border border-[#d7deef] bg-white/92 p-7 shadow-[0_20px_45px_rgba(65,89,138,0.12)] md:p-10">
-            <div className="grid gap-4 border-b border-[#e3e8f5] pb-4 md:grid-cols-[auto_1fr_auto] md:items-center">
-              <div className={`flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-white shadow-[0_10px_24px_rgba(40,68,123,0.25)] ${scoreStyle.text} ${state.result.score < 60 ? "bg-[#fde9e9]" : state.result.score < 80 ? "bg-[#fff5dd]" : "bg-[#e8f7ef]"}`}>
-                <p className="text-4xl font-bold leading-none">{state.result.score}</p>
-                <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
+            {isSpecialResult ? (
+              <div className="rounded-2xl border border-[#b6ddc2] bg-[#f7fff9] px-6 py-8">
+                <p className="text-xl font-semibold leading-9 text-[#1f6a3b] md:text-2xl md:leading-10">
+                  {state.result.summary}
+                </p>
               </div>
-              <div>
-                <p className="text-[20px] font-semibold leading-8 text-[#b42828]">{state.result.summary}</p>
-              </div>
-              <div>
-                <p className="text-xs tracking-[0.08em] text-[#5f6481]">行业识别</p>
-                <p className="mt-1 text-2xl font-semibold text-[#2a3961]">{state.result.industry}</p>
-                <p className="mt-1 text-xs text-[#66749b]">超过 {state.result.percentile}% 同行页面</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h2 className="text-xl font-semibold text-[#1d4684]">3个改了就能见效的点</h2>
-              {state.result.suggestions.map((item) => (
-                <article key={item.title} className="rounded-2xl border border-[#e1e6f3] bg-[#fcfdff] p-5">
-                  <h3 className="text-xl font-semibold leading-8 text-[#1f6a3b]">{item.action}</h3>
-                  <p className="mt-3 text-sm leading-6 text-[#2f3f62]">
-                    <span className="font-semibold text-[#31466d]">为什么要先改：</span>
-                    {item.issue}
-                  </p>
-                  <p className="mt-3 rounded-lg bg-[#edf2ff] px-3 py-2 text-xs leading-5 text-[#445b8d]">表现：{item.evidence}</p>
-                  <p className="mt-3 text-sm leading-6 text-[#374665]">
-                    <span className="font-semibold text-[#31466d]">影响：</span>
-                    {item.impact}
-                  </p>
-                </article>
-              ))}
-            </div>
-
-            <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
-              <p className="text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
-                这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
-              </p>
-              <div className="mt-4 flex justify-start">
-                <button
-                  type="button"
-                  onClick={handleDownloadReport}
-                  className="inline-flex animate-[pulse_2.6s_ease-in-out_infinite] items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
-                >
-                  <span aria-hidden="true" className="text-base leading-none">↓</span>
-                  下载完整诊断报告
-                </button>
-              </div>
-            </div>
-
-            {recommendedArticles.length > 0 ? (
-              <div className="border-t border-[#dbe3f4] pt-5">
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">📚 继续自己改</p>
-                  <h3 className="text-lg font-semibold text-[#1d2f56]">先看这两篇</h3>
-                  <p className="text-sm leading-6 text-[#5a6b8d]">这两篇正好对应你这页最明显的问题。</p>
+            ) : (
+              <>
+                <div className="grid gap-4 border-b border-[#e3e8f5] pb-4 md:grid-cols-[auto_1fr_auto] md:items-center">
+                  <div className={`flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-white shadow-[0_10px_24px_rgba(40,68,123,0.25)] ${scoreStyle.text} ${state.result.score < 60 ? "bg-[#fde9e9]" : state.result.score < 80 ? "bg-[#fff5dd]" : "bg-[#e8f7ef]"}`}>
+                    <p className="text-4xl font-bold leading-none">{state.result.score}</p>
+                    <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
+                  </div>
+                  <div>
+                    <p className="text-[20px] font-semibold leading-8 text-[#b42828]">{state.result.summary}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs tracking-[0.08em] text-[#5f6481]">行业识别</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#2a3961]">{state.result.industry}</p>
+                    <p className="mt-1 text-xs text-[#66749b]">超过 {state.result.percentile}% 同行页面</p>
+                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  {recommendedArticles.map((article, index) => (
-                    <a
-                      key={article.slug}
-                      href={article.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => handleClickArticle(article, index + 1)}
-                      className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
-                    >
-                      <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
-                        <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
-                      </div>
-                      <div className="px-4 py-4">
-                        <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
-                        <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
-                        <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
-                          打开文章
-                          <span aria-hidden="true">↗</span>
-                        </span>
-                      </div>
-                    </a>
+                <div className="space-y-3">
+                  <h2 className="text-xl font-semibold text-[#1d4684]">3个改了就能见效的点</h2>
+                  {state.result.suggestions.map((item) => (
+                    <article key={item.title} className="rounded-2xl border border-[#e1e6f3] bg-[#fcfdff] p-5">
+                      <h3 className="text-xl font-semibold leading-8 text-[#1f6a3b]">{item.action}</h3>
+                      <p className="mt-3 text-sm leading-6 text-[#2f3f62]">
+                        <span className="font-semibold text-[#31466d]">为什么要先改：</span>
+                        {item.issue}
+                      </p>
+                      <p className="mt-3 rounded-lg bg-[#edf2ff] px-3 py-2 text-xs leading-5 text-[#445b8d]">表现：{item.evidence}</p>
+                      <p className="mt-3 text-sm leading-6 text-[#374665]">
+                        <span className="font-semibold text-[#31466d]">影响：</span>
+                        {item.impact}
+                      </p>
+                    </article>
                   ))}
                 </div>
-              </div>
-            ) : null}
 
-            <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
-              <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
-                <div>
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">💬 继续深度诊断</p>
-                  <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
-                    如果你准备继续推进，我可以直接告诉你先改哪一块最值
-                  </h2>
-                  <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#d8e2ff]">
-                    自动结果能帮你快速定位问题，但不会结合你当前的业务目标告诉你先改什么、为什么先改。人工诊断会进一步给出更具体的优先级判断、修改重点和推进方向。
+                <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
+                  <p className="text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
+                    这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
                   </p>
-                  <p className="mt-2 text-sm text-[#b8c8f4]">适合已经准备改版、投流或提升当前转化效率的项目。很多客户会先从一次诊断开始，再决定是否进入更深入的项目合作。</p>
-                  <a
-                    href="https://mengqi.cc"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-4 inline-flex items-center rounded-lg border border-[#8ca4dc] px-4 py-2 text-sm font-medium text-[#e4ecff] transition hover:bg-[#304579]"
-                  >
-                    查看专家诊断流程
-                  </a>
+                  <div className="mt-4 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={handleDownloadReport}
+                      className="inline-flex animate-[pulse_2.6s_ease-in-out_infinite] items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
+                    >
+                      <span aria-hidden="true" className="text-base leading-none">↓</span>
+                      下载完整诊断报告
+                    </button>
+                  </div>
                 </div>
 
-                <div className="rounded-2xl border border-[#5567a1] bg-[#253666]/65 p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="group relative rounded-lg border border-[#6173ad]">
-                      <Image src="/wechat-qr.jpg" alt="微信二维码" width={88} height={88} className="rounded-lg object-cover" />
-                      <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,460px)] rounded-xl border border-[#7085c7] bg-white p-2 shadow-[0_24px_55px_rgba(22,34,77,0.4)] group-hover:block">
-                        <div className="relative aspect-square w-full">
-                          <Image
-                            src="/wechat-qr.jpg"
-                            alt="微信二维码放大预览"
-                            fill
-                            sizes="(max-width: 768px) 72vw, 460px"
-                            className="rounded-lg object-contain"
-                          />
+                {recommendedArticles.length > 0 ? (
+                  <div className="border-t border-[#dbe3f4] pt-5">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改</p>
+                      <h3 className="text-lg font-semibold text-[#1d2f56]">先看这两篇</h3>
+                      <p className="text-sm leading-6 text-[#5a6b8d]">这两篇正好对应你这页最明显的问题。</p>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {recommendedArticles.map((article, index) => (
+                        <a
+                          key={article.slug}
+                          href={article.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => handleClickArticle(article, index + 1)}
+                          className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
+                        >
+                          <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
+                            <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
+                          </div>
+                          <div className="px-4 py-4">
+                            <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
+                            <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
+                            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
+                              打开文章
+                              <span aria-hidden="true">↗</span>
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
+                  <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
+                    <div>
+                      <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
+                      <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
+                        如果你准备继续推进，我可以直接告诉你先改哪一块最值
+                      </h2>
+                      <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#d8e2ff]">
+                        自动结果能帮你快速定位问题，但不会结合你当前的业务目标告诉你先改什么、为什么先改。人工诊断会进一步给出更具体的优先级判断、修改重点和推进方向。
+                      </p>
+                      <p className="mt-2 text-sm text-[#b8c8f4]">适合已经准备改版、投流或提升当前转化效率的项目。很多客户会先从一次诊断开始，再决定是否进入更深入的项目合作。</p>
+                      <a
+                        href="https://mengqi.cc"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex items-center rounded-lg border border-[#8ca4dc] px-4 py-2 text-sm font-medium text-[#e4ecff] transition hover:bg-[#304579]"
+                      >
+                        查看专家诊断流程
+                      </a>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#5567a1] bg-[#253666]/65 p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="group relative rounded-lg border border-[#6173ad]">
+                          <Image src="/wechat-qr.jpg" alt="微信二维码" width={88} height={88} className="rounded-lg object-cover" />
+                          <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,460px)] rounded-xl border border-[#7085c7] bg-white p-2 shadow-[0_24px_55px_rgba(22,34,77,0.4)] group-hover:block">
+                            <div className="relative aspect-square w-full">
+                              <Image
+                                src="/wechat-qr.jpg"
+                                alt="微信二维码放大预览"
+                                fill
+                                sizes="(max-width: 768px) 72vw, 460px"
+                                className="rounded-lg object-contain"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold text-white">微信号：{WECHAT_ID}</p>
+                            <button
+                              type="button"
+                              onClick={handleCopyWechat}
+                              className="rounded-md border border-[#8ca4dc] px-2 py-1 text-xs font-medium text-[#d8e5ff] hover:bg-[#304579]"
+                            >
+                              复制
+                            </button>
+                          </div>
+                          <p className="mt-1 text-xs text-[#c6d5fb]">复制微信，继续深度诊断。把你的页面发我，我会基于当前结果继续往下看。</p>
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-white">微信号：{WECHAT_ID}</p>
-                        <button
-                          type="button"
-                          onClick={handleCopyWechat}
-                          className="rounded-md border border-[#8ca4dc] px-2 py-1 text-xs font-medium text-[#d8e5ff] hover:bg-[#304579]"
-                        >
-                          复制
-                        </button>
-                      </div>
-                      <p className="mt-1 text-xs text-[#c6d5fb]">复制微信，继续深度诊断。把你的页面发我，我会基于当前结果继续往下看。</p>
-                    </div>
+                  </div>
+                  {state.leadSent ? (
+                    <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。添加后请备注“LP诊断”，我会优先按这次结果继续往下看。</p>
+                  ) : null}
+                </div>
+
+                <div className="rounded-2xl border border-[#d7dff0] bg-white/90 p-4">
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">客户反馈</p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-3">
+                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
+                      “我们调整首屏文案后，注册转化明显提升。”
+                    </blockquote>
+                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
+                      “第一次有人这么直接指出我们页面真正的问题。”
+                    </blockquote>
+                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
+                      “改了 CTA 和信任区后，咨询转化明显变好。”
+                    </blockquote>
                   </div>
                 </div>
-              </div>
-              {state.leadSent ? (
-                <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。添加后请备注“LP诊断”，我会优先按这次结果继续往下看。</p>
-              ) : null}
-            </div>
-
-            <div className="rounded-2xl border border-[#d7dff0] bg-white/90 p-4">
-              <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">客户反馈</p>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                  “我们调整首屏文案后，注册转化明显提升。”
-                </blockquote>
-                <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                  “第一次有人这么直接指出我们页面真正的问题。”
-                </blockquote>
-                <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                  “改了 CTA 和信任区后，咨询转化明显变好。”
-                </blockquote>
-              </div>
-            </div>
+              </>
+            )}
           </section>
         ) : null}
         </section>

@@ -40,12 +40,44 @@ const tabs = [
 ] as const;
 
 const ALL_SCOPE = "all";
+const INTERNAL_DOMAINS = ["mengqi.cc", "lp.mengqi.cc"];
+const REFERENCE_BRAND_DOMAINS = ["apple.com", "google.com", "notion.so", "figma.com", "openai.com", "stripe.com"];
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function matchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+function isSpecialSample(url: string): boolean {
+  const hostname = getHostname(url);
+  return (
+    INTERNAL_DOMAINS.some((domain) => matchesDomain(hostname, domain)) ||
+    REFERENCE_BRAND_DOMAINS.some((domain) => matchesDomain(hostname, domain))
+  );
+}
 
 function getLeadIntent(row: SubmissionRow): {
-  label: "高意向" | "值得跟进" | "普通";
+  label: "特殊样本" | "高意向" | "值得跟进" | "普通";
   tone: string;
   rowTone: string;
+  muted?: boolean;
 } {
+  if (isSpecialSample(row.url)) {
+    return {
+      label: "特殊样本",
+      tone: "border-[#d7d9e0] bg-[#f3f4f7] text-[#737885]",
+      rowTone: "bg-[#f7f8fa] text-[#8a90a0]",
+      muted: true,
+    };
+  }
+
   if (row.copiedWechat) {
     return {
       label: "高意向",
@@ -107,9 +139,15 @@ export default function DashboardPage() {
 
   const maxFunnelCount = useMemo(() => Math.max(...(data?.funnel.map((item) => item.count) || [1])), [data]);
   const metricLabelPrefix = data?.date === ALL_SCOPE ? "累计" : "当日";
-  const highIntentCount = useMemo(() => data?.submissions.filter((row) => row.copiedWechat).length ?? 0, [data]);
+  const highIntentCount = useMemo(
+    () => data?.submissions.filter((row) => !isSpecialSample(row.url) && row.copiedWechat).length ?? 0,
+    [data],
+  );
   const followUpCount = useMemo(
-    () => data?.submissions.filter((row) => row.copiedWechat || row.downloadedReport || (row.score !== null && row.score < 60)).length ?? 0,
+    () =>
+      data?.submissions.filter(
+        (row) => !isSpecialSample(row.url) && (row.copiedWechat || row.downloadedReport || (row.score !== null && row.score < 60)),
+      ).length ?? 0,
     [data],
   );
 
@@ -255,7 +293,10 @@ export default function DashboardPage() {
                       {data.submissions.map((row) => {
                         const intent = getLeadIntent(row);
                         return (
-                        <tr key={`${row.createdAt}-${row.url}`} className={`border-b border-[#eef2fb] align-top text-[#2b3856] ${intent.rowTone}`}>
+                        <tr
+                          key={`${row.createdAt}-${row.url}`}
+                          className={`border-b border-[#eef2fb] align-top text-[#2b3856] ${intent.rowTone} ${intent.muted ? "opacity-60" : ""}`}
+                        >
                           <td className="px-3 py-3 whitespace-nowrap">{new Date(row.createdAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</td>
                           <td className="max-w-[360px] px-3 py-3">
                             <div className="truncate" title={row.url}>{row.url}</div>
@@ -268,7 +309,9 @@ export default function DashboardPage() {
                             </span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap">
-                            {row.score !== null ? (
+                            {intent.muted ? (
+                              <span className="text-xs text-[#8b98b5]">跳过</span>
+                            ) : row.score !== null ? (
                               <a
                                 href={`/api/dashboard-report?userKey=${encodeURIComponent(row.userKey)}&url=${encodeURIComponent(row.url)}`}
                                 target="_blank"

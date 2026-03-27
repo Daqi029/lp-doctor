@@ -56,6 +56,20 @@ const FEATURE_WORDS = ["feature", "功能", "模块", "集成", "integration", "
 const POSITIONING_WORDS = ["framework", "方法论", "独家", "proprietary", "专为", "only", "category"];
 const RISK_REVERSE_WORDS = ["guarantee", "退款", "无风险", "cancel anytime", "满意"];
 const growthBlocks: GrowthBlock[] = growthKnowledgeBase.blocks;
+const INTERNAL_DOMAINS = ["mengqi.cc", "lp.mengqi.cc"];
+const REFERENCE_BRAND_DOMAINS = ["apple.com", "google.com", "notion.so", "figma.com", "openai.com", "stripe.com"];
+const INTERNAL_SUMMARIES = [
+  "🙃 本站给本站打 💯 分，先放自己一马。",
+  "🙃 测到自己人了，这页默认满分。",
+  "🙃 自家网站不公开互打分，今天先记 100。",
+  "🙃 这题不算，本站对本站自动偏心。",
+];
+const BRAND_REFERENCE_SUMMARIES = [
+  "😈 这页是高手样本，我们先向他看齐。",
+  "😈 这是头部样本页，今天先别和它硬比，先向它看齐。",
+  "😈 这是大厂样本局，我们先学习，再评分。",
+  "😈 这类页面更适合当参考答案，先向它看齐。",
+];
 
 function stripHtml(html: string): string {
   return html
@@ -147,6 +161,14 @@ function toSignals(html: string): PageSignals {
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function matchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+function pickRandom<T>(items: T[], seed: string): T {
+  return items[stableHash(seed) % items.length];
 }
 
 function containsAny(text: string, terms: string[]): boolean {
@@ -310,6 +332,93 @@ function stableHash(input: string): number {
     hash = (hash * 31 + input.charCodeAt(index)) >>> 0;
   }
   return hash;
+}
+
+function createSpecialSuggestions(kind: "internal" | "reference"): Suggestion[] {
+  if (kind === "internal") {
+    return [
+      {
+        category: "fallback_value_prop",
+        title: "这次先不和自己较真",
+        issue: "这是你自己的站，用公开诊断逻辑来打分，娱乐性会大于参考性。",
+        impact: "继续认真评下去，最大的结果通常不是优化，而是开始挑自己刺。",
+        action: "今天先把这页放过，把诊断留给真正要拿去转化的页面。",
+        evidence: "本次输入域名命中内部站点名单。",
+        priority: "high",
+      },
+      {
+        category: "fallback_structure",
+        title: "更适合拿它做样本，而不是做考题",
+        issue: "自家页面更适合当作案例和入口，不适合拿来验证评分系统是不是“无情”。",
+        impact: "如果反复拿自己站测试，很容易让工具从增长产品变成自我怀疑制造机。",
+        action: "把这页当作示例页使用，重点观察外部用户怎么测、怎么转化。",
+        evidence: "这类页面通常承担品牌介绍和咨询承接，而不只是标准落地页任务。",
+        priority: "high",
+      },
+      {
+        category: "fallback_copy",
+        title: "真正该看的不是分数，是外部用户怎么用",
+        issue: "对自家站来说，分数本身参考价值有限，真正有价值的是别人会不会被它推动行动。",
+        impact: "只盯着自评分数，容易错过更关键的漏斗信号和真实线索。",
+        action: "继续观察提交、下载报告和加微信这些真实行为，比给自己打分更值。",
+        evidence: "这类页面的核心任务是引流和成交，不是参与公开榜单竞争。",
+        priority: "high",
+      },
+    ];
+  }
+
+  return [
+    {
+      category: "fallback_value_prop",
+      title: "先拆它首屏为什么能立住",
+      issue: "这类页面更适合被当作高水平样本，而不是直接拿当前规则做横向比较。",
+      impact: "如果直接按普通落地页思路去评，容易忽略它在品牌、叙事和产品势能上的优势。",
+      action: "先看它第一屏到底先讲了什么、压住了什么，再想哪些方法能迁移到自己的页面。",
+      evidence: "本次输入域名命中头部品牌参考名单。",
+      priority: "high",
+    },
+    {
+      category: "fallback_structure",
+      title: "别只看漂亮，先看它怎么引导视线",
+      issue: "头部站真正强的地方，通常不是“设计好看”，而是信息顺序和动作节奏控制得很稳。",
+      impact: "只抄视觉，不拆结构，最后很容易学到表面，学不到转化方法。",
+      action: "重点观察它如何安排首屏信息、按钮主次和下一步路径，再反推自己的页面差距。",
+      evidence: "这类页面通常会把品牌、产品和行动入口压成极少数高密度信息块。",
+      priority: "high",
+    },
+    {
+      category: "fallback_copy",
+      title: "把它当参考答案，不要当直接对手",
+      issue: "品牌站和综合产品站承担的目标更复杂，不完全等同于典型注册/咨询型 Landing Page。",
+      impact: "拿它做对照是有价值的，但直接比总分，参考意义会打折。",
+      action: "把这次测试当作拆样本：看它怎么讲、怎么排、怎么让用户继续往下走。",
+      evidence: "这类页面更适合用于学习表达、层级和信任构建方式。",
+      priority: "high",
+    },
+  ];
+}
+
+function createSpecialResult(kind: "internal" | "reference", url: string): AnalyzeResult {
+  const hostname = new URL(url).hostname.replace(/^www\./, "");
+  const summary =
+    kind === "internal"
+      ? pickRandom(INTERNAL_SUMMARIES, `${hostname}:internal`)
+      : pickRandom(BRAND_REFERENCE_SUMMARIES, `${hostname}:reference`);
+
+  return {
+    score: kind === "internal" ? 100 : 96,
+    percentile: kind === "internal" ? 100 : 99,
+    industry: "General",
+    summary,
+    specialMode: kind,
+    previewImage: null,
+    suggestions: createSpecialSuggestions(kind),
+    dimensions:
+      kind === "internal"
+        ? { valueProp: 100, structure: 100, cta: 100, trust: 100, copy: 100 }
+        : { valueProp: 96, structure: 95, cta: 94, trust: 98, copy: 96 },
+    source: "fresh",
+  };
 }
 
 function pickSuggestionVariant(category: keyof typeof SUGGESTION_VARIANTS, seed: string): SuggestionVariant {
@@ -523,6 +632,16 @@ function buildFallbackSuggestions(
 }
 
 export async function analyzeLandingPage(url: string): Promise<AnalyzeResult> {
+  const hostname = new URL(url).hostname.replace(/^www\./, "");
+
+  if (INTERNAL_DOMAINS.some((domain) => matchesDomain(hostname, domain))) {
+    return createSpecialResult("internal", url);
+  }
+
+  if (REFERENCE_BRAND_DOMAINS.some((domain) => matchesDomain(hostname, domain))) {
+    return createSpecialResult("reference", url);
+  }
+
   const response = await fetch(url, {
     method: "GET",
     redirect: "follow",
