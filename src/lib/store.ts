@@ -667,7 +667,7 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
     if (legacyError) {
       throw new Error("failed to load summary");
     }
-    safeEventRows = (legacyRows ?? []).map((row) => ({ ...(row as SupabaseEventRow), device_type: null }));
+    safeEventRows = (legacyRows ?? []).map((row: unknown) => ({ ...(row as SupabaseEventRow), device_type: null }));
   }
 
   const events: EventEntry[] = safeEventRows.map((row) => ({
