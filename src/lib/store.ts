@@ -42,6 +42,7 @@ export type EventType =
   | "result_generated"
   | "download_report"
   | "click_article"
+  | "click_case"
   | "copy_wechat"
   | "quota_exceeded";
 
@@ -135,6 +136,7 @@ type DailySummary = {
     resultGenerated: number;
     downloadReport: number;
     articleClick: number;
+    caseClick: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -158,6 +160,7 @@ type DailySummary = {
     industry: string | null;
     downloadedReport: boolean;
     articleClicks: number;
+    caseClicks: number;
     copiedWechat: boolean;
   }[];
   leads: LeadEntry[];
@@ -347,6 +350,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   const resultGenerated = events.filter((item) => item.type === "result_generated");
   const downloadReport = events.filter((item) => item.type === "download_report");
   const articleClick = events.filter((item) => item.type === "click_article");
+  const caseClick = events.filter((item) => item.type === "click_case");
   const copyWechat = events.filter((item) => item.type === "copy_wechat");
   const quotaExceeded = events.filter((item) => item.type === "quota_exceeded");
 
@@ -361,6 +365,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
       industry: string | null;
       downloadedReport: boolean;
       articleClicks: number;
+      caseClicks: number;
       copiedWechat: boolean;
     }
   >();
@@ -377,6 +382,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
         industry: null,
         downloadedReport: false,
         articleClicks: 0,
+        caseClicks: 0,
         copiedWechat: false,
       });
     }
@@ -399,6 +405,11 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   for (const entry of articleClick) {
     const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.articleClicks += 1;
+  }
+
+  for (const entry of caseClick) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.caseClicks += 1;
   }
 
   for (const entry of copyWechat) {
@@ -451,6 +462,7 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
       resultGenerated: resultGenerated.length,
       downloadReport: downloadReport.length,
       articleClick: articleClick.length,
+      caseClick: caseClick.length,
       copyWechat: copyWechat.length,
       quotaExceeded: quotaExceeded.length,
     },

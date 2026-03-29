@@ -217,6 +217,34 @@ export default function Home() {
     }).catch(() => undefined);
   }
 
+  function handleClickCase(caseLabel: string, position: number) {
+    if (!state.result) return;
+
+    track("click_case", {
+      case_label: caseLabel,
+      case_position: position,
+      url: normalizeInputUrl(state.inputUrl),
+      score: state.result.score,
+      percentile: state.result.percentile,
+      industry: state.result.industry,
+    });
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        type: "click_case",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+        articleLabel: caseLabel,
+        articlePosition: position,
+      }),
+    }).catch(() => undefined);
+  }
+
   async function handleDevReset() {
     const response = await fetch("/api/dev-reset", { method: "POST" });
     if (!response.ok) return;
@@ -477,57 +505,50 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
-                  <p className="text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
-                    这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
-                  </p>
-                  <div className="mt-4 flex justify-start">
-                    <button
-                      type="button"
-                      onClick={handleDownloadReport}
-                      className="inline-flex animate-[pulse_2.6s_ease-in-out_infinite] items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
-                    >
-                      <span aria-hidden="true" className="text-base leading-none">↓</span>
-                      下载完整诊断报告
-                    </button>
+                <h2 className="text-xl font-semibold text-[#1d4684]">真实案例</h2>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <a
+                    href="https://x.com/jaredliu_bravo/status/1836239276549546293"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => handleClickCase("jared_x_case", 1)}
+                    className="rounded-xl border-2 border-[#c8d2ef] bg-[linear-gradient(145deg,#faf8ff_0%,#f5f9ff_52%,#fffaf3_100%)] p-4 text-sm text-[#394765] shadow-[0_10px_24px_rgba(45,73,131,0.06)] transition hover:-translate-y-0.5 hover:border-[#9fb3e4] hover:shadow-[0_20px_44px_rgba(45,73,131,0.14)]"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#cfd9ef] bg-white text-sm font-semibold text-[#28457c] shadow-[0_10px_22px_rgba(45,73,131,0.1)]">
+                        JL
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#1f355f]">Jared Liu</p>
+                        <p className="text-xs text-[#66789d]">AI Reading List 项目 · X 公开反馈</p>
+                      </div>
+                    </div>
+                    <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                      “原来注册转化率只有 <span className="font-semibold text-[#b42828]">10.6%</span>，按 Mengqi 的建议优化后，注册转化提升了近 <span className="font-semibold text-[#0f8a45]">28%</span>。”
+                    </blockquote>
+                    <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
+                  </a>
+                  <div className="rounded-xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-3 text-sm text-[#394765]">
+                    <p className="text-sm font-semibold text-[#1f355f]">连续 3 个月收入增长</p>
+                    <p className="mt-1 text-xs text-[#66789d]">真实项目数据（项目名称按客户要求保密）</p>
+                    <p className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                      优化转化链路后，月收入连续 3 个月保持增长，最高月环比提升
+                      <span className="font-semibold text-[#0f8a45]"> 152% </span>
+                      ，随后两个月继续增长
+                      <span className="font-semibold text-[#0f8a45]"> 34% </span>
+                      和
+                      <span className="font-semibold text-[#0f8a45]"> 31% </span>
+                      。
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#ead7e1] bg-[linear-gradient(145deg,#fff7fb_0%,#fff8f3_50%,#fffdf8_100%)] p-3 text-sm text-[#394765]">
+                    <p className="text-sm font-semibold text-[#1f355f]">很多项目缺的不是建议，而是优先级判断</p>
+                    <p className="mt-1 text-xs text-[#66789d]">服务价值说明</p>
+                    <p className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                      真正拖慢改版的，往往不是没人发现问题，而是不知道该先改哪一块最值。这也是人工诊断最有价值的地方。
+                    </p>
                   </div>
                 </div>
-
-                {recommendedArticles.length > 0 ? (
-                  <div className="border-t border-[#dbe3f4] pt-5">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改</p>
-                      <h3 className="text-lg font-semibold text-[#1d2f56]">先看这两篇</h3>
-                      <p className="text-sm leading-6 text-[#5a6b8d]">这两篇正好对应你这页最明显的问题。</p>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      {recommendedArticles.map((article, index) => (
-                        <a
-                          key={article.slug}
-                          href={article.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => handleClickArticle(article, index + 1)}
-                          className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
-                        >
-                          <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
-                            <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
-                          </div>
-                          <div className="px-4 py-4">
-                            <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
-                            <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
-                            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
-                              打开文章
-                              <span aria-hidden="true">↗</span>
-                            </span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
 
                 <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
                   <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
@@ -587,20 +608,57 @@ export default function Home() {
                   ) : null}
                 </div>
 
-                <div className="rounded-2xl border border-[#d7dff0] bg-white/90 p-4">
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#506187]">客户反馈</p>
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                      “我们调整首屏文案后，注册转化明显提升。”
-                    </blockquote>
-                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                      “第一次有人这么直接指出我们页面真正的问题。”
-                    </blockquote>
-                    <blockquote className="rounded-xl border border-[#d7dff0] bg-[#f7f9ff] p-3 text-sm text-[#394765]">
-                      “改了 CTA 和信任区后，咨询转化明显变好。”
-                    </blockquote>
+                <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
+                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">先保存结果</p>
+                  <p className="mt-2 text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
+                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
+                    这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
+                  </p>
+                  <div className="mt-4 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={handleDownloadReport}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
+                    >
+                      <span aria-hidden="true" className="text-base leading-none">↓</span>
+                      下载完整诊断报告
+                    </button>
                   </div>
                 </div>
+
+                {recommendedArticles.length > 0 ? (
+                  <div className="border-t border-[#dbe3f4] pt-5">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改</p>
+                      <h3 className="text-lg font-semibold text-[#1d2f56]">如果你想继续自己改，可以先看这两篇</h3>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {recommendedArticles.map((article, index) => (
+                        <a
+                          key={article.slug}
+                          href={article.href}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => handleClickArticle(article, index + 1)}
+                          className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
+                        >
+                          <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
+                            <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
+                          </div>
+                          <div className="px-4 py-4">
+                            <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
+                            <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
+                            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
+                              打开文章
+                              <span aria-hidden="true">↗</span>
+                            </span>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </>
             )}
           </section>
