@@ -47,6 +47,14 @@ function scoreTone(score: number): { text: string } {
   return { text: "text-[#13663f]" };
 }
 
+function scoreEmotionLabel(score: number): string {
+  if (score <= 39) return "这页几乎接不住增长，继续投流就是继续浪费";
+  if (score <= 49) return "问题已经很重，再拖下去只会越投越亏";
+  if (score <= 59) return "急需整改，别再一边漏水一边加流量";
+  if (score <= 74) return "有点底子，但关键转化点还没打透";
+  return "不错，但还没优化到可以放心放量";
+}
+
 export default function Home() {
   const [state, setState] = useState<State>({
     loading: false,
@@ -478,6 +486,7 @@ export default function Home() {
                     <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
                   </div>
                   <div>
+                    <p className="mb-2 text-sm font-semibold leading-6 text-[#8f2a2a]">{scoreEmotionLabel(state.result.score)}</p>
                     <p className="text-[20px] font-semibold leading-8 text-[#b42828]">{state.result.summary}</p>
                   </div>
                   <div>
