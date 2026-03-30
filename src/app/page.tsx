@@ -47,12 +47,20 @@ function scoreTone(score: number): { text: string } {
   return { text: "text-[#13663f]" };
 }
 
-function scoreEmotionLabel(score: number): string {
-  if (score <= 39) return "这页几乎接不住增长，继续投流就是继续浪费";
-  if (score <= 49) return "问题已经很重，再拖下去只会越投越亏";
-  if (score <= 59) return "急需整改，别再一边漏水一边加流量";
-  if (score <= 74) return "有点底子，但关键转化点还没打透";
-  return "不错，但还没优化到可以放心放量";
+function scoreEmotionCopy(score: number): { label: string; detail: string } {
+  if (score <= 39) {
+    return { label: "接不住增长", detail: "继续投流就是继续浪费" };
+  }
+  if (score <= 49) {
+    return { label: "问题很重", detail: "再拖下去只会越投越亏" };
+  }
+  if (score <= 59) {
+    return { label: "急需整改", detail: "别再一边漏水一边加流量" };
+  }
+  if (score <= 74) {
+    return { label: "有点底子", detail: "但关键转化点还没打透" };
+  }
+  return { label: "还不错", detail: "但还没优化到可以放心放量" };
 }
 
 export default function Home() {
@@ -88,6 +96,7 @@ export default function Home() {
   const progress = Math.round(((stageIndex + 1) / PROCESS_STAGES.length) * 100);
 
   const scoreStyle = scoreTone(state.result?.score || 0);
+  const scoreEmotion = scoreEmotionCopy(state.result?.score || 0);
   const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
   const isSpecialResult = Boolean(state.result?.specialMode);
 
@@ -486,7 +495,12 @@ export default function Home() {
                     <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
                   </div>
                   <div>
-                    <p className="mb-2 text-sm font-semibold leading-6 text-[#8f2a2a]">{scoreEmotionLabel(state.result.score)}</p>
+                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="inline-flex items-center rounded-full bg-[#fde9e9] px-2.5 py-1 text-xs font-semibold text-[#8f2a2a]">
+                        {scoreEmotion.label}
+                      </span>
+                      <span className="text-sm font-medium leading-6 text-[#8f2a2a]">{scoreEmotion.detail}</span>
+                    </div>
                     <p className="text-[20px] font-semibold leading-8 text-[#b42828]">{state.result.summary}</p>
                   </div>
                   <div>
