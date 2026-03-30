@@ -430,14 +430,14 @@ export default function Home() {
               <div className="rounded-2xl border border-[#b9ddc6] bg-white/80 p-4">
                 <div className="flex items-start gap-4">
                   <div className="group relative rounded-lg border border-[#b9ddc6]">
-                    <Image src="/wechat-qr.jpg" alt="微信二维码" width={88} height={88} className="rounded-lg object-cover" />
-                    <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,460px)] rounded-xl border border-[#9acdb0] bg-white p-2 shadow-[0_24px_55px_rgba(29,83,50,0.35)] group-hover:block">
+                    <Image src="/wechat-qr.jpg" alt="微信二维码" width={352} height={352} className="rounded-lg object-cover" />
+                    <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,345px)] rounded-xl border border-[#9acdb0] bg-white p-2 shadow-[0_24px_55px_rgba(29,83,50,0.35)] group-hover:block">
                       <div className="relative aspect-square w-full">
                         <Image
                           src="/wechat-qr.jpg"
                           alt="微信二维码放大预览"
                           fill
-                          sizes="(max-width: 768px) 72vw, 460px"
+                          sizes="(max-width: 768px) 72vw, 345px"
                           className="rounded-lg object-contain"
                         />
                       </div>
@@ -551,57 +551,44 @@ export default function Home() {
                 </div>
 
                 <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
-                  <div className="grid gap-6 lg:grid-cols-[1.2fr_0.9fr] lg:items-start">
+                  <div className="grid gap-8 lg:grid-cols-[1.2fr_0.9fr] lg:items-stretch">
                     <div>
                       <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
                       <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
-                        如果你准备继续推进，我可以直接告诉你先改哪一块最值
+                        你别猜了，找Mengqi先把最值得的那一块改对。
                       </h2>
-                      <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[#d8e2ff]">
-                        自动结果能帮你快速定位问题，但不会结合你当前的业务目标告诉你先改什么、为什么先改。人工诊断会进一步给出更具体的优先级判断、修改重点和推进方向。
-                      </p>
-                      <p className="mt-2 text-sm text-[#b8c8f4]">适合已经准备改版、投流或提升当前转化效率的项目。很多客户会先从一次诊断开始，再决定是否进入更深入的项目合作。</p>
-                      <a
-                        href="https://mengqi.cc"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 inline-flex items-center rounded-lg border border-[#8ca4dc] px-4 py-2 text-sm font-medium text-[#e4ecff] transition hover:bg-[#304579]"
-                      >
-                        查看专家诊断流程
-                      </a>
+                      <div className="mt-3 max-w-3xl">
+                        <p className="text-[15px] leading-7 text-[#d8e2ff]">自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
+                      </div>
+                      <p className="mt-4 text-sm text-[#b8c8f4]">我每天只会认真看少量页面，优先给已经准备开始改版的项目。</p>
                     </div>
 
-                    <div className="rounded-2xl border border-[#5567a1] bg-[#253666]/65 p-4">
-                      <div className="flex items-center gap-4">
+                    <div className="flex min-h-[240px] items-center gap-4 px-1">
                         <div className="group relative rounded-lg border border-[#6173ad]">
-                          <Image src="/wechat-qr.jpg" alt="微信二维码" width={88} height={88} className="rounded-lg object-cover" />
-                          <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,460px)] rounded-xl border border-[#7085c7] bg-white p-2 shadow-[0_24px_55px_rgba(22,34,77,0.4)] group-hover:block">
+                          <Image src="/wechat-qr.jpg" alt="微信二维码" width={176} height={176} className="rounded-lg object-cover" />
+                          <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,345px)] rounded-xl border border-[#7085c7] bg-white p-2 shadow-[0_24px_55px_rgba(22,34,77,0.4)] group-hover:block">
                             <div className="relative aspect-square w-full">
                               <Image
                                 src="/wechat-qr.jpg"
                                 alt="微信二维码放大预览"
                                 fill
-                                sizes="(max-width: 768px) 72vw, 460px"
+                                sizes="(max-width: 768px) 72vw, 345px"
                                 className="rounded-lg object-contain"
                               />
                             </div>
                           </div>
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold text-white">微信号：{WECHAT_ID}</p>
-                            <button
-                              type="button"
-                              onClick={handleCopyWechat}
-                              className="rounded-md border border-[#8ca4dc] px-2 py-1 text-xs font-medium text-[#d8e5ff] hover:bg-[#304579]"
-                            >
-                              复制
-                            </button>
-                          </div>
-                          <p className="mt-1 text-xs text-[#c6d5fb]">复制微信，继续深度诊断。把你的页面发我，我会基于当前结果继续往下看。</p>
+                          <p className="text-sm font-semibold text-white">微信号：{WECHAT_ID}</p>
+                          <button
+                            type="button"
+                            onClick={handleCopyWechat}
+                            className="mt-3 rounded-md border border-[#8ca4dc] bg-[#304579] px-3 py-1.5 text-xs font-medium text-[#eef3ff] transition hover:bg-[#3a528c]"
+                          >
+                            复制微信继续聊
+                          </button>
                         </div>
                       </div>
-                    </div>
                   </div>
                   {state.leadSent ? (
                     <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。添加后请备注“LP诊断”，我会优先按这次结果继续往下看。</p>
