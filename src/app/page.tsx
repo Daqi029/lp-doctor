@@ -583,7 +583,7 @@ export default function Home() {
                       <div className="mt-3 max-w-3xl">
                         <p className="text-[15px] leading-7 text-[#d8e2ff]">自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
                       </div>
-                      <p className="mt-4 text-sm text-[#b8c8f4]">我每天只会认真看少量页面，优先给已经准备开始改版的项目。</p>
+                      <p className="mt-4 text-sm text-[#b8c8f4]">适合已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
                     </div>
 
                     <div className="flex min-h-[240px] items-center gap-4 px-1">
@@ -608,13 +608,13 @@ export default function Home() {
                             onClick={handleCopyWechat}
                             className="mt-3 rounded-md border border-[#8ca4dc] bg-[#304579] px-3 py-1.5 text-xs font-medium text-[#eef3ff] transition hover:bg-[#3a528c]"
                           >
-                            复制微信继续聊
+                            复制微信发我页面
                           </button>
                         </div>
                       </div>
                   </div>
                   {state.leadSent ? (
-                    <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。添加后请备注“LP诊断”，我会优先按这次结果继续往下看。</p>
+                    <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。把页面链接发我，我会直接告诉你先改哪一块最值。</p>
                   ) : null}
                 </div>
 
