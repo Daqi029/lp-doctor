@@ -178,6 +178,12 @@ type DevicePerformance = {
   copyRate: number | null;
 };
 
+type SummaryQuery = {
+  date?: string;
+  from?: string;
+  to?: string;
+};
+
 type EventPayload = {
   type: EventType;
   deviceType?: DeviceType;
@@ -210,6 +216,45 @@ function isAllDateScope(date?: string): boolean {
   return date === "all";
 }
 
+function isValidDateString(value?: string): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function normalizeSummaryQuery(input?: string | SummaryQuery): SummaryQuery {
+  if (!input) return {};
+  if (typeof input === "string") return { date: input };
+  return input;
+}
+
+function formatRangeLabel(from: string, to: string): string {
+  return from === to ? from : `${from} 至 ${to}`;
+}
+
+function resolveSummaryScope(queryInput?: string | SummaryQuery): {
+  mode: "all" | "day" | "range";
+  label: string;
+  from?: string;
+  to?: string;
+} {
+  const query = normalizeSummaryQuery(queryInput);
+
+  if (isAllDateScope(query.date)) {
+    return { mode: "all", label: "all" };
+  }
+
+  if (isValidDateString(query.from) && isValidDateString(query.to)) {
+    const from = query.from <= query.to ? query.from : query.to;
+    const to = query.from <= query.to ? query.to : query.from;
+    if (from === to) {
+      return { mode: "day", label: from, from, to };
+    }
+    return { mode: "range", label: formatRangeLabel(from, to), from, to };
+  }
+
+  const target = isValidDateString(query.date) ? query.date : getToday();
+  return { mode: "day", label: target, from: target, to: target };
+}
+
 function hashText(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 16);
 }
@@ -234,15 +279,16 @@ function getToday(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function isSameDay(iso: string, target: string): boolean {
-  return iso.slice(0, 10) === target;
-}
-
 function dayRange(date: string): { start: string; end: string } {
   const start = `${date}T00:00:00.000Z`;
   const day = new Date(start);
   day.setUTCDate(day.getUTCDate() + 1);
   return { start, end: day.toISOString() };
+}
+
+function isoWithinDateRange(iso: string, from: string, to: string): boolean {
+  const day = iso.slice(0, 10);
+  return day >= from && day <= to;
 }
 
 async function ensureStore(): Promise<void> {
@@ -478,18 +524,21 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   };
 }
 
-async function getDailySummaryLocal(date?: string): Promise<DailySummary> {
+async function getDailySummaryLocal(queryInput?: string | SummaryQuery): Promise<DailySummary> {
   const store = await readLocalStore();
-  if (isAllDateScope(date)) {
+  const scope = resolveSummaryScope(queryInput);
+
+  if (scope.mode === "all") {
     const analyzeUsers = Object.values(store.users).filter((u) => u.counter.used > 0).length;
     return buildDailySummary("all", store.events, store.leads, analyzeUsers);
   }
 
-  const target = date ?? getToday();
-  const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date === target && u.counter.used > 0).length;
-  const leads = store.leads.filter((item) => isSameDay(item.createdAt, target));
-  const events = store.events.filter((item) => isSameDay(item.createdAt, target));
-  return buildDailySummary(target, events, leads, analyzeUsers);
+  const from = scope.from!;
+  const to = scope.to!;
+  const analyzeUsers = Object.values(store.users).filter((u) => u.counter.date >= from && u.counter.date <= to && u.counter.used > 0).length;
+  const leads = store.leads.filter((item) => isoWithinDateRange(item.createdAt, from, to));
+  const events = store.events.filter((item) => isoWithinDateRange(item.createdAt, from, to));
+  return buildDailySummary(scope.label, events, leads, analyzeUsers);
 }
 
 async function resetStoreLocal(): Promise<void> {
@@ -643,9 +692,9 @@ async function recordEventSupabase(
   throw new Error("failed to record event");
 }
 
-async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
+async function getDailySummarySupabase(queryInput?: string | SummaryQuery): Promise<DailySummary> {
   const supabase = getSupabaseAdmin();
-  const target = date ?? getToday();
+  const scope = resolveSummaryScope(queryInput);
   const eventsQuery = supabase
     .from("events")
     .select("id, type, user_key, created_at, device_type, url, score, percentile, industry")
@@ -656,11 +705,12 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
     .order("created_at", { ascending: false });
   const quotaQuery = supabase.from("user_daily_quotas").select("user_key").gt("used", 0);
 
-  if (!isAllDateScope(target)) {
-    const range = dayRange(target);
-    eventsQuery.gte("created_at", range.start).lt("created_at", range.end);
-    leadsQuery.gte("created_at", range.start).lt("created_at", range.end);
-    quotaQuery.eq("date", target);
+  if (scope.mode !== "all") {
+    const fromRange = dayRange(scope.from!);
+    const toRange = dayRange(scope.to!);
+    eventsQuery.gte("created_at", fromRange.start).lt("created_at", toRange.end);
+    leadsQuery.gte("created_at", fromRange.start).lt("created_at", toRange.end);
+    quotaQuery.gte("date", scope.from!).lte("date", scope.to!);
   }
 
   const [{ data: eventRows, error: eventError }, { data: leadRows, error: leadError }, { data: quotaRows, error: quotaError }] =
@@ -705,7 +755,7 @@ async function getDailySummarySupabase(date?: string): Promise<DailySummary> {
     summary: row.summary,
   }));
 
-  return buildDailySummary(target, events, leads, quotaRows?.length ?? 0);
+  return buildDailySummary(scope.label, events, leads, quotaRows?.length ?? 0);
 }
 
 async function getStoredResultLocal(userKey: string, url: string): Promise<AnalyzeResult | null> {
@@ -767,9 +817,9 @@ export async function recordEvent(
   await recordEventLocal(userKey, payload);
 }
 
-export async function getDailySummary(date?: string): Promise<DailySummary> {
+export async function getDailySummary(queryInput?: string | SummaryQuery): Promise<DailySummary> {
   assertPersistentStorageConfigured();
-  return hasSupabaseConfig() ? getDailySummarySupabase(date) : getDailySummaryLocal(date);
+  return hasSupabaseConfig() ? getDailySummarySupabase(queryInput) : getDailySummaryLocal(queryInput);
 }
 
 export async function resetStore(): Promise<void> {

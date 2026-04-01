@@ -61,6 +61,11 @@ const tabs = [
 ] as const;
 
 const ALL_SCOPE = "all";
+const RANGE_PRESETS = [
+  { id: "7d", label: "近1周", days: 7 },
+  { id: "14d", label: "近2周", days: 14 },
+  { id: "28d", label: "近4周", days: 28 },
+] as const;
 const INTERNAL_DOMAINS = ["mengqi.cc", "lp.mengqi.cc"];
 const REFERENCE_BRAND_DOMAINS = ["apple.com", "google.com", "notion.so", "figma.com", "openai.com", "stripe.com"];
 
@@ -126,6 +131,31 @@ function formatScopeLabel(date: string): string {
   return date === ALL_SCOPE ? "全部历史数据" : date;
 }
 
+function formatDateInput(value: Date): string {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getRelativeRange(days: number): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date();
+  from.setDate(to.getDate() - (days - 1));
+  return {
+    from: formatDateInput(from),
+    to: formatDateInput(to),
+  };
+}
+
+function isRangeLabel(date: string): boolean {
+  return date.includes(" 至 ");
+}
+
+function getMetricLabelPrefix(date: string): string {
+  return date === ALL_SCOPE || isRangeLabel(date) ? "累计" : "当日";
+}
+
 function deviceLabel(device: "mobile" | "desktop" | "tablet"): string {
   if (device === "mobile") return "移动端";
   if (device === "desktop") return "桌面端";
@@ -139,14 +169,27 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scope, setScope] = useState<string>(ALL_SCOPE);
+  const [selectedPreset, setSelectedPreset] = useState<(typeof RANGE_PRESETS)[number]["id"] | null>(null);
   const [dateInput, setDateInput] = useState("");
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
 
   useEffect(() => {
     async function load(targetScope: string) {
       setLoading(true);
       setError("");
       try {
-        const url = targetScope === ALL_SCOPE ? "/api/daily-summary?date=all" : `/api/daily-summary?date=${targetScope}`;
+        const params = new URLSearchParams();
+        if (targetScope === ALL_SCOPE) {
+          params.set("date", "all");
+        } else if (targetScope.startsWith("range:")) {
+          const [, rawFrom = "", rawTo = ""] = targetScope.split(":");
+          params.set("from", rawFrom);
+          params.set("to", rawTo);
+        } else {
+          params.set("date", targetScope);
+        }
+        const url = `/api/daily-summary?${params.toString()}`;
         const response = await fetch(url);
         const payload = (await response.json()) as { ok: boolean; data?: SummaryPayload; message?: string };
         if (!response.ok || !payload.ok || !payload.data) {
@@ -165,7 +208,7 @@ export default function DashboardPage() {
   }, [scope]);
 
   const maxFunnelCount = useMemo(() => Math.max(...(data?.funnel.map((item) => item.count) || [1])), [data]);
-  const metricLabelPrefix = data?.date === ALL_SCOPE ? "累计" : "当日";
+  const metricLabelPrefix = data ? getMetricLabelPrefix(data.date) : "累计";
   const highIntentCount = useMemo(
     () => data?.submissions.filter((row) => !isSpecialSample(row.url) && row.copiedWechat).length ?? 0,
     [data],
@@ -180,17 +223,42 @@ export default function DashboardPage() {
 
   function handleToday() {
     setDateInput(todayString);
+    setSelectedPreset(null);
+    setRangeFrom("");
+    setRangeTo("");
     setScope(todayString);
   }
 
   function handleAllHistory() {
     setDateInput("");
+    setSelectedPreset(null);
+    setRangeFrom("");
+    setRangeTo("");
     setScope(ALL_SCOPE);
   }
 
   function handleApplyDate() {
     if (!dateInput) return;
+    setSelectedPreset(null);
+    setRangeFrom("");
+    setRangeTo("");
     setScope(dateInput);
+  }
+
+  function handlePreset(id: (typeof RANGE_PRESETS)[number]["id"], days: number) {
+    const range = getRelativeRange(days);
+    setSelectedPreset(id);
+    setDateInput("");
+    setRangeFrom(range.from);
+    setRangeTo(range.to);
+    setScope(`range:${range.from}:${range.to}`);
+  }
+
+  function handleApplyRange() {
+    if (!rangeFrom || !rangeTo) return;
+    setSelectedPreset(null);
+    setDateInput("");
+    setScope(`range:${rangeFrom}:${rangeTo}`);
   }
 
   return (
@@ -206,7 +274,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-3">
-              <div className="flex items-center gap-2 rounded-2xl border border-[#d7dff0] bg-white px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#d7dff0] bg-white px-3 py-2">
                 <button
                   type="button"
                   onClick={handleAllHistory}
@@ -227,6 +295,18 @@ export default function DashboardPage() {
                 >
                   今天
                 </button>
+                {RANGE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handlePreset(preset.id, preset.days)}
+                    className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      selectedPreset === preset.id ? "bg-[#1f355f] text-white" : "text-[#506187] hover:bg-[#eef3ff]"
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
                 <input
                   type="date"
                   value={dateInput}
@@ -239,6 +319,33 @@ export default function DashboardPage() {
                   className="rounded-xl bg-[#eef3ff] px-3 py-2 text-sm font-medium text-[#1f355f] transition hover:bg-[#dde8ff]"
                 >
                   查看日期
+                </button>
+                <span className="mx-1 hidden h-6 w-px bg-[#dfe5f2] md:block" />
+                <input
+                  type="date"
+                  value={rangeFrom}
+                  onChange={(event) => {
+                    setSelectedPreset(null);
+                    setRangeFrom(event.target.value);
+                  }}
+                  className="rounded-xl border border-[#d7dff0] px-3 py-2 text-sm text-[#2b3856] outline-none"
+                />
+                <span className="text-sm text-[#7b87a4]">至</span>
+                <input
+                  type="date"
+                  value={rangeTo}
+                  onChange={(event) => {
+                    setSelectedPreset(null);
+                    setRangeTo(event.target.value);
+                  }}
+                  className="rounded-xl border border-[#d7dff0] px-3 py-2 text-sm text-[#2b3856] outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyRange}
+                  className="rounded-xl bg-[#eef3ff] px-3 py-2 text-sm font-medium text-[#1f355f] transition hover:bg-[#dde8ff]"
+                >
+                  查看周期
                 </button>
               </div>
               <div className="inline-flex rounded-2xl border border-[#d7dff0] bg-white p-1">
