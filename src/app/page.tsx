@@ -69,6 +69,33 @@ function scoreEmotionCopy(score: number): { label: string; detail: string } {
   return { label: "还不错", detail: "但还没优化到可以放心放量" };
 }
 
+function priorityAreaLabel(category: AnalyzeResult["suggestions"][number]["category"]): string {
+  switch (category) {
+    case "value_clarity_first":
+    case "fallback_value_prop":
+      return "首屏价值表达";
+    case "reduce_cognitive_load":
+    case "fallback_structure":
+      return "页面结构与信息负担";
+    case "activation_path_visible":
+    case "fallback_cta":
+      return "CTA 路径与动作说明";
+    case "outcome_over_feature":
+      return "结果表达";
+    case "trust_acceleration":
+    case "fallback_trust":
+      return "信任证据";
+    case "friction_kill":
+      return "行动阻力";
+    case "positioning_density":
+      return "目标用户定位";
+    case "fallback_copy":
+      return "文案表达";
+    default:
+      return "首屏价值表达";
+  }
+}
+
 export default function Home() {
   const [state, setState] = useState<State>({
     loading: false,
@@ -106,6 +133,7 @@ export default function Home() {
   const scoreEmotion = scoreEmotionCopy(displayScore);
   const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
   const isSpecialResult = Boolean(state.result?.specialMode);
+  const firstSuggestion = state.result?.suggestions[0] ?? null;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -521,43 +549,89 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="grid gap-4 border-b border-[#e3e8f5] pb-4 md:grid-cols-[auto_1fr_auto] md:items-center">
-                  <div className={`flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-white shadow-[0_10px_24px_rgba(40,68,123,0.25)] ${scoreStyle.text} ${displayScore < 60 ? "bg-[#fde9e9]" : displayScore < 75 ? "bg-[#fff5dd]" : "bg-[#e8f7ef]"}`}>
-                    <p className="text-4xl font-bold leading-none">{displayScore}</p>
-                    <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
-                  </div>
+                <div className="grid gap-6 border-b border-[#e3e8f5] pb-6 lg:grid-cols-[1.35fr_0.65fr]">
                   <div>
-                    <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="inline-flex items-center rounded-full bg-[#fde9e9] px-2.5 py-1 text-xs font-semibold text-[#8f2a2a]">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">结果总览</p>
+                    <h2 className="mt-3 text-[30px] font-semibold leading-tight text-[#17376e] md:text-[32px]">这是当前最影响你转化的 3 个问题</h2>
+                    <p className="mt-5 text-[17px] leading-8 text-[#46587d]">{state.result.summary}</p>
+                    <div className="mt-7 bg-[#fff7f7] pl-5">
+                      <div className="border-l-4 border-[#ff4d4f] py-4 pl-6">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <p className="text-sm font-semibold text-[#d73030]">最优先先改</p>
+                          <p className="text-[18px] font-semibold text-[#b42828]">
+                            {firstSuggestion ? priorityAreaLabel(firstSuggestion.category) : "首屏价值表达"}
+                          </p>
+                        </div>
+                        <p className="mt-3 text-[15px] leading-7 text-[#4f4a5f]">
+                          {firstSuggestion?.impact || "如果用户在前 3 秒看不懂“这是给谁的、能带来什么结果”，后面的内容很难继续发挥作用。"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="rounded-[28px] border border-[#dfe5f4] bg-white p-6 shadow-[0_12px_30px_rgba(45,73,131,0.05)]">
+                    <p className="text-sm font-semibold text-[#60729a]">当前转化表现</p>
+                    <div className="mt-5 flex items-end gap-2">
+                      <p className={`text-5xl font-semibold leading-none ${scoreStyle.text}`}>{displayScore}</p>
+                      <p className="pb-1 text-[18px] font-medium text-[#8a95ac]">/ 100</p>
+                    </div>
+                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                      <span className="inline-flex items-center rounded-xl bg-[#fdeeee] px-3 py-1.5 text-sm font-semibold text-[#d12d2d]">
                         {scoreEmotion.label}
                       </span>
-                      <span className="text-sm font-medium leading-6 text-[#8f2a2a]">{scoreEmotion.detail}</span>
+                      <span className="inline-flex items-center rounded-xl bg-[#fff4dd] px-3 py-1.5 text-sm font-semibold text-[#d68400]">
+                        {scoreEmotion.detail}
+                      </span>
                     </div>
-                    <p className="text-[20px] font-semibold leading-8 text-[#b42828]">{state.result.summary}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs tracking-[0.08em] text-[#5f6481]">行业识别</p>
-                    <p className="mt-1 text-2xl font-semibold text-[#2a3961]">{state.result.industry}</p>
-                    <p className="mt-1 text-xs text-[#66749b]">超过 {state.result.percentile}% 同行页面</p>
+                    <p className="mt-6 text-[15px] leading-8 text-[#526583]">
+                      基础结构已经具备，但还存在几个会直接影响转化的关键问题。优先解决下面这 3 个点，通常比继续堆内容更有效。
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h2 className="text-xl font-semibold text-[#1d4684]">3个改了就能见效的点</h2>
-                  {state.result.suggestions.map((item) => (
+                  {state.result.suggestions.map((item, index) => (
                     <article key={item.title} className="rounded-2xl border border-[#e1e6f3] bg-[#fcfdff] p-5">
-                      <h3 className="text-xl font-semibold leading-8 text-[#1f6a3b]">{item.action}</h3>
-                      <p className="mt-3 text-sm leading-6 text-[#2f3f62]">
-                        <span className="font-semibold text-[#31466d]">为什么要先改：</span>
-                        {item.issue}
-                      </p>
-                      <p className="mt-3 rounded-lg bg-[#edf2ff] px-3 py-2 text-xs leading-5 text-[#445b8d]">表现：{item.evidence}</p>
-                      <p className="mt-3 text-sm leading-6 text-[#374665]">
-                        <span className="font-semibold text-[#31466d]">影响：</span>
-                        {item.impact}
-                      </p>
+                      <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">问题 {index + 1}</p>
+                      <h3 className="mt-2 text-xl font-semibold leading-8 text-[#1d4684]">{item.title}</h3>
+                      <p className="mt-3 text-[15px] leading-7 text-[#32425f]">{item.issue}</p>
+                      <div className="mt-4 space-y-3 text-sm leading-7 text-[#31415e]">
+                        <div>
+                          <p className="font-semibold text-[#1f355f]">为什么这会影响转化</p>
+                          <p className="mt-1">{item.impact}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-[#1f355f]">在这个页面里的体现</p>
+                          <p className="mt-1">{item.evidence}</p>
+                        </div>
+                        <div className="rounded-xl border border-[#dce8ff] bg-[#f5f9ff] px-4 py-3">
+                          <p className="font-semibold text-[#1f355f]">建议先做什么</p>
+                          <p className="mt-1 text-[#40557e]">{item.action}</p>
+                        </div>
+                      </div>
                     </article>
                   ))}
+                </div>
+
+                <div className="rounded-2xl border border-[#dfe5f3] bg-[linear-gradient(180deg,#f9fbff_0%,#ffffff_100%)] p-5 shadow-[0_12px_28px_rgba(45,73,131,0.06)]">
+                  <h3 className="text-xl font-semibold text-[#1d4684]">这份快速检测能帮你发现明显问题，但不是完整诊断</h3>
+                  <div className="mt-3 space-y-2 text-[15px] leading-7 text-[#415273]">
+                    <p>这份检测适合帮你快速看见页面里最影响转化的明显问题。</p>
+                    <p>如果你想进一步判断问题到底出在 offer、CTA、信任结构还是整体页面逻辑，就需要更完整的诊断。</p>
+                  </div>
+                  <div className="mt-5 border-t border-[#e3e9f7] pt-5">
+                    <h4 className="text-lg font-semibold text-[#1d4684]">想看看我是怎么分析转化问题的？</h4>
+                    <p className="mt-2 max-w-3xl text-[15px] leading-7 text-[#415273]">你可以先看看我平时是怎么判断 Landing Page 问题的。</p>
+                    <div className="mt-4">
+                      <a
+                        href="https://mengqi.cc"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl border border-[#b8c7ea] bg-[#f6f9ff] px-4 py-2.5 text-sm font-medium text-[#244783] transition hover:bg-[#edf3ff]"
+                      >
+                        查看我如何分析转化问题
+                      </a>
+                    </div>
+                  </div>
                 </div>
 
                 <h2 className="text-xl font-semibold text-[#1d4684]">真实案例</h2>
@@ -605,60 +679,47 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-6 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-8">
-                  <div className="grid gap-8 lg:grid-cols-[1.2fr_0.9fr] lg:items-stretch">
-                    <div>
-                      <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
-                      <h2 className="mt-2 text-2xl font-semibold leading-tight text-white md:text-3xl">
-                        你别猜了，找Mengqi先把最值得的那一块改对。
-                      </h2>
-                      <div className="mt-3 max-w-3xl">
-                        <p className="text-[15px] leading-7 text-[#d8e2ff]">自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
-                      </div>
-                      <p className="mt-4 text-sm text-[#b8c8f4]">适合已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
-                      <div className="mt-5 flex flex-wrap items-center gap-3">
-                        <a
-                          href={QUICK_CALL_URL}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={handleClickQuickCall}
-                          className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-[#203762] shadow-[0_10px_24px_rgba(18,29,62,0.18)] transition hover:bg-[#eef3ff]"
-                        >
-                          先约 15 分钟聊清楚
-                        </a>
-                        <p className="text-xs text-[#b8c8f4]">如果你还不想直接加微信，可以先约 15 分钟，把问题边界聊清楚。</p>
-                      </div>
+                <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-8 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-10">
+                  <div className="max-w-5xl">
+                    <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
+                    <h2 className="mt-3 text-[30px] font-semibold leading-tight text-white md:text-[42px]">
+                      想进一步聊聊你的页面？
+                    </h2>
+                    <div className="mt-5 max-w-4xl">
+                      <p className="text-[16px] leading-8 text-[#d8e2ff]">
+                        如果你想知道最该先改什么，可以预约一个 Quick Call。我会帮你快速判断问题方向和下一步优先级。
+                      </p>
                     </div>
 
-                    <div className="flex min-h-[240px] items-center gap-4 px-1">
-                        <div className="group relative rounded-lg border border-[#6173ad]">
-                          <Image src="/wechat-qr.jpg" alt="微信二维码" width={176} height={176} className="rounded-lg object-cover" />
-                          <div className="pointer-events-none absolute bottom-[calc(100%+12px)] right-0 z-[60] hidden w-[min(72vw,345px)] rounded-xl border border-[#7085c7] bg-white p-2 shadow-[0_24px_55px_rgba(22,34,77,0.4)] group-hover:block">
-                            <div className="relative aspect-square w-full">
-                              <Image
-                                src="/wechat-qr.jpg"
-                                alt="微信二维码放大预览"
-                                fill
-                                sizes="(max-width: 768px) 72vw, 345px"
-                                className="rounded-lg object-contain"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-white">微信号：{WECHAT_ID}</p>
-                          <button
-                            type="button"
-                            onClick={handleCopyWechat}
-                            className="mt-3 rounded-md border border-[#8ca4dc] bg-[#304579] px-3 py-1.5 text-xs font-medium text-[#eef3ff] transition hover:bg-[#3a528c]"
-                          >
-                            复制微信发我页面
-                          </button>
-                        </div>
-                      </div>
+                    <div className="mt-8">
+                      <a
+                        href={QUICK_CALL_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={handleClickQuickCall}
+                        className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 text-base font-semibold text-[#1f2f55] shadow-[0_12px_28px_rgba(18,29,62,0.18)] transition hover:bg-[#eef3ff]"
+                      >
+                        预约 Quick Call
+                      </a>
+                      <p className="mt-4 text-[15px] text-[#b8c8f4]">适合已经有页面、想认真提升转化的人。</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-10 border-t border-[#43598f] pt-8">
+                    <p className="text-sm font-semibold text-[#b9c8f5]">更习惯微信？</p>
+                    <div className="mt-4 flex flex-wrap items-center gap-4">
+                      <p className="text-[17px] font-semibold text-white">微信号：{WECHAT_ID}</p>
+                      <button
+                        type="button"
+                        onClick={handleCopyWechat}
+                        className="rounded-xl border border-[#6276ad] bg-transparent px-5 py-2.5 text-sm font-medium text-[#e7eeff] transition hover:bg-[#304579]"
+                      >
+                        复制微信号
+                      </button>
+                    </div>
                   </div>
                   {state.leadSent ? (
-                    <p className="mt-3 text-sm text-[#d4defa]">微信号已复制。把页面链接发我，我会直接告诉你先改哪一块最值。</p>
+                    <p className="mt-4 text-sm text-[#d4defa]">微信号已复制。如果你更想直接聊，把页面链接发我就行。</p>
                   ) : null}
                 </div>
 
@@ -672,7 +733,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={handleDownloadReport}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#9fd0ac] bg-[#1f6a3b] px-5 py-3 text-sm font-medium text-[#ecfff2] shadow-[0_14px_28px_rgba(31,106,59,0.2)] transition hover:bg-[#17522d]"
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#2f4786] bg-[#223567] px-5 py-3 text-sm font-medium text-white shadow-[0_14px_28px_rgba(34,53,103,0.18)] transition hover:bg-[#1b2b54]"
                     >
                       <span aria-hidden="true" className="text-base leading-none">↓</span>
                       下载完整诊断报告
