@@ -18,6 +18,7 @@ type State = {
 };
 
 const WECHAT_ID = "daqi029";
+const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://mengqi.cc";
 const SOCIAL_PROOF = {
   visits: 161,
   submissions: 99,
@@ -41,23 +42,28 @@ function normalizeInputUrl(raw: string): string {
   return `https://${value}`;
 }
 
+function getDisplayScore(score: number): number {
+  const clamped = Math.max(40, Math.min(71, score));
+  return Math.round(55 + ((clamped - 40) * 30) / 31);
+}
+
 function scoreTone(score: number): { text: string } {
   if (score < 60) return { text: "text-[#b42828]" };
-  if (score < 80) return { text: "text-[#9a6a07]" };
+  if (score < 75) return { text: "text-[#9a6a07]" };
   return { text: "text-[#13663f]" };
 }
 
 function scoreEmotionCopy(score: number): { label: string; detail: string } {
-  if (score <= 39) {
+  if (score <= 59) {
     return { label: "接不住增长", detail: "继续投流就是继续浪费" };
   }
-  if (score <= 49) {
+  if (score <= 64) {
     return { label: "问题很重", detail: "再拖下去只会越投越亏" };
   }
-  if (score <= 59) {
+  if (score <= 74) {
     return { label: "急需整改", detail: "别再一边漏水一边加流量" };
   }
-  if (score <= 74) {
+  if (score <= 84) {
     return { label: "有点底子", detail: "但关键转化点还没打透" };
   }
   return { label: "还不错", detail: "但还没优化到可以放心放量" };
@@ -95,8 +101,9 @@ export default function Home() {
 
   const progress = Math.round(((stageIndex + 1) / PROCESS_STAGES.length) * 100);
 
-  const scoreStyle = scoreTone(state.result?.score || 0);
-  const scoreEmotion = scoreEmotionCopy(state.result?.score || 0);
+  const displayScore = state.result ? getDisplayScore(state.result.score) : 0;
+  const scoreStyle = scoreTone(displayScore);
+  const scoreEmotion = scoreEmotionCopy(displayScore);
   const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
   const isSpecialResult = Boolean(state.result?.specialMode);
 
@@ -261,6 +268,31 @@ export default function Home() {
       }),
     }).catch(() => undefined);
   }
+
+  function handleClickQuickCall() {
+    if (!state.result) return;
+
+    track("click_quick_call", {
+      url: normalizeInputUrl(state.inputUrl),
+      score: state.result.score,
+      percentile: state.result.percentile,
+      industry: state.result.industry,
+    });
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        type: "click_quick_call",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+      }),
+    }).catch(() => undefined);
+  }
+
 
   async function handleDevReset() {
     const response = await fetch("/api/dev-reset", { method: "POST" });
@@ -490,8 +522,8 @@ export default function Home() {
             ) : (
               <>
                 <div className="grid gap-4 border-b border-[#e3e8f5] pb-4 md:grid-cols-[auto_1fr_auto] md:items-center">
-                  <div className={`flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-white shadow-[0_10px_24px_rgba(40,68,123,0.25)] ${scoreStyle.text} ${state.result.score < 60 ? "bg-[#fde9e9]" : state.result.score < 80 ? "bg-[#fff5dd]" : "bg-[#e8f7ef]"}`}>
-                    <p className="text-4xl font-bold leading-none">{state.result.score}</p>
+                  <div className={`flex h-24 w-24 flex-col items-center justify-center rounded-full border-4 border-white shadow-[0_10px_24px_rgba(40,68,123,0.25)] ${scoreStyle.text} ${displayScore < 60 ? "bg-[#fde9e9]" : displayScore < 75 ? "bg-[#fff5dd]" : "bg-[#e8f7ef]"}`}>
+                    <p className="text-4xl font-bold leading-none">{displayScore}</p>
                     <p className="mt-1 text-[11px] font-medium text-[#3f4f72]">/100分</p>
                   </div>
                   <div>
@@ -584,6 +616,18 @@ export default function Home() {
                         <p className="text-[15px] leading-7 text-[#d8e2ff]">自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
                       </div>
                       <p className="mt-4 text-sm text-[#b8c8f4]">适合已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
+                      <div className="mt-5 flex flex-wrap items-center gap-3">
+                        <a
+                          href={QUICK_CALL_URL}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={handleClickQuickCall}
+                          className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-[#203762] shadow-[0_10px_24px_rgba(18,29,62,0.18)] transition hover:bg-[#eef3ff]"
+                        >
+                          先约 15 分钟聊清楚
+                        </a>
+                        <p className="text-xs text-[#b8c8f4]">如果你还不想直接加微信，可以先约 15 分钟，把问题边界聊清楚。</p>
+                      </div>
                     </div>
 
                     <div className="flex min-h-[240px] items-center gap-4 px-1">

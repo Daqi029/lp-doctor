@@ -12,6 +12,7 @@ type SubmissionRow = {
   downloadedReport: boolean;
   articleClicks: number;
   caseClicks: number;
+  quickCallClicks: number;
   copiedWechat: boolean;
 };
 
@@ -25,6 +26,7 @@ type SummaryPayload = {
     downloadReport: number;
     articleClick: number;
     caseClick: number;
+    quickCallClick: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -426,8 +428,35 @@ export default function DashboardPage() {
                 <MetricCard label="下载报告" value={data.overview.downloadReport} />
                 <MetricCard label="点击文章" value={data.overview.articleClick} />
                 <MetricCard label="点击案例" value={data.overview.caseClick} />
+                <MetricCard label="预约 quick call" value={data.overview.quickCallClick} />
                 <MetricCard label="复制微信" value={data.overview.copyWechat} />
                 <MetricCard label="额度用完" value={data.overview.quotaExceeded} />
+              </div>
+
+              <div className="rounded-2xl border border-[#d7dff0] bg-white p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#1d4684]">结果页关键动作</h2>
+                    <p className="mt-1 text-sm text-[#5b6f99]">先看用户会不会点案例、约 quick call，再决定是否愿意直接进入微信。</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-4">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#1f6a3b]">点击真实案例</p>
+                    <p className="mt-2 text-3xl font-semibold text-[#154d2c]">{data.overview.caseClick}</p>
+                    <p className="mt-2 text-sm text-[#4a6a57]">看用户是否愿意先补信任，再决定要不要继续行动。</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#d6ddf3] bg-[linear-gradient(145deg,#f8faff_0%,#f3f6ff_52%,#fbfcff_100%)] p-4">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#244783]">预约 quick call</p>
+                    <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.quickCallClick}</p>
+                    <p className="mt-2 text-sm text-[#5b6f99]">看用户是不是只抗拒微信，而不是抗拒进一步交流。</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#d9dff0] bg-[#f8fbff] p-4">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">复制微信</p>
+                    <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.copyWechat}</p>
+                    <p className="mt-2 text-sm text-[#5b6f99]">这是最重的一步，能直接反映用户愿不愿意进入私聊关系。</p>
+                  </div>
+                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -461,6 +490,7 @@ export default function DashboardPage() {
                         <th className="px-3 py-3 font-medium">诊断报告</th>
                         <th className="px-3 py-3 font-medium">下载报告</th>
                         <th className="px-3 py-3 font-medium">点击案例</th>
+                        <th className="px-3 py-3 font-medium">预约通话</th>
                         <th className="px-3 py-3 font-medium">点击文章</th>
                         <th className="px-3 py-3 font-medium">复制微信</th>
                       </tr>
@@ -503,6 +533,7 @@ export default function DashboardPage() {
                           </td>
                           <td className="px-3 py-3">{row.downloadedReport ? "是" : "否"}</td>
                           <td className="px-3 py-3">{row.caseClicks > 0 ? row.caseClicks : "-"}</td>
+                          <td className="px-3 py-3">{row.quickCallClicks > 0 ? row.quickCallClicks : "-"}</td>
                           <td className="px-3 py-3">{row.articleClicks > 0 ? row.articleClicks : "-"}</td>
                           <td className="px-3 py-3">{row.copiedWechat ? "是" : "否"}</td>
                         </tr>

@@ -9,6 +9,12 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+
+function getDisplayScore(score: number): number {
+  const clamped = Math.max(40, Math.min(71, score));
+  return Math.round(55 + ((clamped - 40) * 30) / 31);
+}
+
 export function buildReportHtml({
   url,
   result,
@@ -18,6 +24,8 @@ export function buildReportHtml({
   result: AnalyzeResult;
   wechatId: string;
 }): string {
+  const displayScore = getDisplayScore(result.score);
+
   return `<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -32,7 +40,7 @@ export function buildReportHtml({
       h1 { margin: 14px 0 8px; font-size: 34px; line-height: 1.2; color: #1d2f56; }
       .sub { margin: 0; color: #516486; font-size: 15px; line-height: 1.8; }
       .meta { display: grid; grid-template-columns: 130px 1fr; gap: 18px; margin-top: 28px; align-items: center; }
-      .score { width: 130px; height: 130px; border-radius: 999px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${result.score < 60 ? "#fde9e9" : result.score < 80 ? "#fff5dd" : "#e8f7ef"}; color: ${result.score < 60 ? "#b42828" : result.score < 80 ? "#9a6a07" : "#13663f"}; }
+      .score { width: 130px; height: 130px; border-radius: 999px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: ${displayScore < 60 ? "#fde9e9" : displayScore < 75 ? "#fff5dd" : "#e8f7ef"}; color: ${displayScore < 60 ? "#b42828" : displayScore < 75 ? "#9a6a07" : "#13663f"}; }
       .score strong { font-size: 52px; line-height: 1; }
       .score span { margin-top: 6px; font-size: 14px; color: #4f5f84; }
       .summary { font-size: 24px; line-height: 1.5; font-weight: 700; color: #b42828; }
@@ -58,7 +66,7 @@ export function buildReportHtml({
         <p class="sub">URL：${escapeHtml(url)}</p>
         <div class="meta">
           <div class="score">
-            <strong>${result.score}</strong>
+            <strong>${displayScore}</strong>
             <span>/100分</span>
           </div>
           <div>
@@ -81,13 +89,13 @@ export function buildReportHtml({
       </div>
 
       <div class="footer">
-        <div class="eyebrow" style="color:#b9c8f5;">人工深度诊断</div>
-        <h3>如果你准备继续推进，我可以直接告诉你先改哪一块最值</h3>
-        <p>自动结果能帮你快速定位问题，但不会结合你当前的业务目标告诉你先改什么、为什么先改。人工诊断会进一步给出更具体的优先级判断、修改重点和推进方向。</p>
+        <div class="eyebrow" style="color:#b9c8f5;">继续深度诊断</div>
+        <h3>你别猜了，找Mengqi先把最值得的那一块改对。</h3>
+        <p>自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
         <div class="contact">
+          <p><strong>适合项目：</strong>已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
+          <p><strong>先约个 quick call：</strong><a href="https://mengqi.cc" style="color:#fff; text-decoration:underline;">先约 15 分钟聊清楚你现在最卡的地方</a></p>
           <p><strong>微信号：</strong>${escapeHtml(wechatId)}</p>
-          <p><strong>业务说明：</strong>把你的页面发我，我会基于当前结果继续往下看，直接告诉你先改哪一步更值。</p>
-          <p><strong>适合项目：</strong>已经准备改版、投流，或希望提升当前转化效率的页面。</p>
         </div>
       </div>
     </div>
