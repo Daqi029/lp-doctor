@@ -18,7 +18,7 @@ type State = {
 };
 
 const WECHAT_ID = "daqi029";
-const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://mengqi.cc";
+const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://calendly.com/mengqi-pmq/15min";
 const SOCIAL_PROOF = {
   visits: 161,
   submissions: 99,
