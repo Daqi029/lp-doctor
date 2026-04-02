@@ -162,6 +162,10 @@ function deviceLabel(device: "mobile" | "desktop" | "tablet"): string {
   return "平板";
 }
 
+function sanitizeFileLabel(value: string): string {
+  return value.replace(/[^\w\u4e00-\u9fa5-]+/g, "-");
+}
+
 export default function DashboardPage() {
   const todayString = new Date().toISOString().slice(0, 10);
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]["id"]>("data");
@@ -259,6 +263,33 @@ export default function DashboardPage() {
     setSelectedPreset(null);
     setDateInput("");
     setScope(`range:${rangeFrom}:${rangeTo}`);
+  }
+
+  function handleDownloadData() {
+    if (!data) return;
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      scope: data.date,
+      storageMode: data.storageMode,
+      overview: data.overview,
+      funnel: data.funnel,
+      deviceMetrics: data.deviceMetrics,
+      analyzeUsers: data.analyzeUsers,
+      submissions: data.submissions,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `lp-dashboard-${sanitizeFileLabel(data.date)}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -362,6 +393,14 @@ export default function DashboardPage() {
                   </button>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={handleDownloadData}
+                disabled={!data || loading}
+                className="rounded-2xl border border-[#cfd8ec] bg-white px-4 py-2 text-sm font-medium text-[#1f355f] transition hover:bg-[#eef3ff] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                下载当前数据
+              </button>
             </div>
           </div>
 
