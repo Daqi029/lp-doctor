@@ -623,7 +623,7 @@ export default function Home() {
                     <p className="mt-2 max-w-3xl text-[15px] leading-7 text-[#415273]">你可以先看看我平时是怎么判断 Landing Page 问题的。</p>
                     <div className="mt-4">
                       <a
-                        href="https://mengqi.cc"
+                        href="https://quaily.com/overseas/p/landing-page-structure-and-golden-rule"
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center justify-center rounded-xl border border-[#b8c7ea] bg-[#f6f9ff] px-4 py-2.5 text-sm font-medium text-[#244783] transition hover:bg-[#edf3ff]"

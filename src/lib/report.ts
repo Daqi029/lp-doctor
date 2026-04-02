@@ -94,7 +94,8 @@ export function buildReportHtml({
         <p>自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
         <div class="contact">
           <p><strong>适合项目：</strong>已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
-          <p><strong>先约个 quick call：</strong><a href="https://calendly.com/mengqi-pmq/15min" style="color:#fff; text-decoration:underline;">先约 15 分钟聊清楚你现在最卡的地方</a></p>
+          <p><strong>想先看看我是怎么分析转化问题的：</strong><a href="https://quaily.com/overseas/p/landing-page-structure-and-golden-rule" style="color:#fff; text-decoration:underline;">查看我如何分析转化问题</a></p>
+          <p><strong>先约个 Quick Call：</strong><a href="https://calendly.com/mengqi-pmq/15min" style="color:#fff; text-decoration:underline;">先约 15 分钟聊清楚你现在最卡的地方</a></p>
           <p><strong>微信号：</strong>${escapeHtml(wechatId)}</p>
         </div>
       </div>
