@@ -17,15 +17,12 @@ type State = {
   downloadContact: string;
   lightDiagnosisGateOpen: boolean;
   wechatCopied: boolean;
+  socialProofSubmissions: number;
 };
 
 const WECHAT_ID = "daqi029";
 const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://calendly.com/mengqi-pmq/15min";
 const ALIPAY_LIGHT_DIAGNOSIS_IMAGE = "/alipay-light-diagnosis.jpg";
-const SOCIAL_PROOF = {
-  visits: 161,
-  submissions: 99,
-};
 
 const PROCESS_STAGES = ["首屏价值诊断完成", "方案区结构诊断完成", "价格区说服力诊断中", "信任背书诊断中", "CTA 链路诊断中"];
 const PROCESS_LOGS = [
@@ -75,6 +72,7 @@ export default function Home() {
     downloadContact: "",
     lightDiagnosisGateOpen: false,
     wechatCopied: false,
+    socialProofSubmissions: 99,
   });
   const [stageIndex, setStageIndex] = useState(0);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
@@ -94,6 +92,17 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "page_view" }),
     }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    void fetch("/api/daily-summary?date=all")
+      .then((response) => response.json())
+      .then((payload: { ok: boolean; data?: { overview?: { effectiveSubmissionCount?: number } } }) => {
+        const count = payload.data?.overview?.effectiveSubmissionCount;
+        if (!payload.ok || typeof count !== "number") return;
+        setState((prev) => ({ ...prev, socialProofSubmissions: count }));
+      })
+      .catch(() => undefined);
   }, []);
 
   const progress = Math.round(((stageIndex + 1) / PROCESS_STAGES.length) * 100);
@@ -249,16 +258,57 @@ export default function Home() {
       }),
     }).catch(() => undefined);
 
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        type: "open_light_diagnosis_payment",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+      }),
+    }).catch(() => undefined);
+
     setState((prev) => ({ ...prev, lightDiagnosisGateOpen: true, wechatCopied: false }));
   }
 
   function handleCloseLightDiagnosisGate() {
+    if (state.result) {
+      void fetch("/api/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          type: "close_light_diagnosis_payment",
+          url: normalizeInputUrl(state.inputUrl),
+          score: state.result.score,
+          percentile: state.result.percentile,
+          industry: state.result.industry,
+        }),
+      }).catch(() => undefined);
+    }
     setState((prev) => ({ ...prev, lightDiagnosisGateOpen: false, wechatCopied: false }));
   }
 
   async function handleCopyWechat() {
     try {
       await navigator.clipboard.writeText(WECHAT_ID);
+      if (state.result) {
+        void fetch("/api/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({
+            type: "copy_wechat_after_payment",
+            url: normalizeInputUrl(state.inputUrl),
+            score: state.result.score,
+            percentile: state.result.percentile,
+            industry: state.result.industry,
+          }),
+        }).catch(() => undefined);
+      }
       setState((prev) => ({ ...prev, wechatCopied: true }));
     } catch {
       setState((prev) => ({ ...prev, wechatCopied: false }));
@@ -310,10 +360,38 @@ export default function Home() {
   }
 
   function handleOpenDownloadGate() {
+    if (state.result) {
+      void fetch("/api/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          type: "open_download_gate",
+          url: normalizeInputUrl(state.inputUrl),
+          score: state.result.score,
+          percentile: state.result.percentile,
+          industry: state.result.industry,
+        }),
+      }).catch(() => undefined);
+    }
     setState((prev) => ({ ...prev, downloadGateOpen: true }));
   }
 
   function handleCloseDownloadGate() {
+    if (state.result) {
+      void fetch("/api/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          type: "close_download_gate",
+          url: normalizeInputUrl(state.inputUrl),
+          score: state.result.score,
+          percentile: state.result.percentile,
+          industry: state.result.industry,
+        }),
+      }).catch(() => undefined);
+    }
     setState((prev) => ({ ...prev, downloadGateOpen: false }));
   }
 
@@ -384,7 +462,7 @@ export default function Home() {
           <section className="mt-3 rounded-3xl border border-[#d8dff1] bg-white/92 p-5 shadow-[0_14px_28px_rgba(55,79,132,0.06)]">
             <div>
               <h2 className="text-lg font-semibold tracking-tight text-[#203762] md:text-xl">
-                已有 {SOCIAL_PROOF.submissions} 个页面提交了诊断
+                已有 {state.socialProofSubmissions} 个页面提交了诊断
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#5f7197]">
                 提交页面来自美国、中国、新加坡、香港、日本等市场。
@@ -696,21 +774,31 @@ export default function Home() {
                   ×
                 </button>
               </div>
-              <p className="mt-3 text-sm leading-7 text-[#62739a]">
-                留一个你常用的微信号或邮箱，我们把这份报告发给你，也方便你后面继续回来对照修改。
-              </p>
               <label className="mt-5 block text-sm font-medium text-[#41557d]">
                 微信号或邮箱
                 <input
                   value={state.downloadContact}
                   onChange={(e) => setState((prev) => ({ ...prev, downloadContact: e.target.value }))}
-                  placeholder="例如 daqi029 或 hello@company.com"
                   className="mt-2 h-12 w-full rounded-2xl border border-[#cdd8ef] bg-[#fbfcff] px-4 text-sm text-[#1d2f55] outline-none transition focus:border-[#5f7db8] focus:ring-3 focus:ring-[#e4ecff]"
                 />
               </label>
               <button
                 type="button"
                 onClick={() => {
+                  if (state.result) {
+                    void fetch("/api/event", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      keepalive: true,
+                      body: JSON.stringify({
+                        type: "submit_download_gate",
+                        url: normalizeInputUrl(state.inputUrl),
+                        score: state.result.score,
+                        percentile: state.result.percentile,
+                        industry: state.result.industry,
+                      }),
+                    }).catch(() => undefined);
+                  }
                   handleDownloadReport();
                   handleCloseDownloadGate();
                 }}

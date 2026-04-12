@@ -10,9 +10,12 @@ type SubmissionRow = {
   score: number | null;
   industry: string | null;
   downloadedReport: boolean;
-  articleClicks: number;
+  downloadGateOpened: boolean;
+  downloadGateSubmitted: boolean;
   caseClicks: number;
   quickCallClicks: number;
+  lightDiagnosisClicks: number;
+  lightDiagnosisPaymentOpened: boolean;
   copiedWechat: boolean;
 };
 
@@ -21,12 +24,17 @@ type SummaryPayload = {
   storageMode: "supabase" | "local";
   overview: {
     visitors: number;
+    effectiveSubmissionCount: number;
     submitUrl: number;
     resultGenerated: number;
     downloadReport: number;
-    articleClick: number;
+    downloadGateOpen: number;
+    downloadGateSubmit: number;
     caseClick: number;
     quickCallClick: number;
+    lightDiagnosisClick: number;
+    lightDiagnosisPaymentOpen: number;
+    postPaymentWechatCopy: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -423,13 +431,16 @@ export default function DashboardPage() {
               </div>
               <div className="grid gap-4 md:grid-cols-4 xl:grid-cols-7">
                 <MetricCard label={`${metricLabelPrefix}访问`} value={data.overview.visitors} />
+                <MetricCard label="累计有效提交" value={data.overview.effectiveSubmissionCount} />
                 <MetricCard label="提交 URL" value={data.overview.submitUrl} />
                 <MetricCard label="生成结果" value={data.overview.resultGenerated} />
                 <MetricCard label="下载报告" value={data.overview.downloadReport} />
-                <MetricCard label="点击文章" value={data.overview.articleClick} />
+                <MetricCard label="下载留资提交" value={data.overview.downloadGateSubmit} />
                 <MetricCard label="点击案例" value={data.overview.caseClick} />
                 <MetricCard label="预约 quick call" value={data.overview.quickCallClick} />
-                <MetricCard label="复制微信" value={data.overview.copyWechat} />
+                <MetricCard label="轻诊断购买点击" value={data.overview.lightDiagnosisClick} />
+                <MetricCard label="打开支付弹窗" value={data.overview.lightDiagnosisPaymentOpen} />
+                <MetricCard label="付款后复制微信" value={data.overview.postPaymentWechatCopy} />
                 <MetricCard label="额度用完" value={data.overview.quotaExceeded} />
               </div>
 
@@ -437,10 +448,10 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-semibold text-[#1d4684]">结果页关键动作</h2>
-                    <p className="mt-1 text-sm text-[#5b6f99]">先看用户会不会点案例、约 quick call，再决定是否愿意直接进入微信。</p>
+                    <p className="mt-1 text-sm text-[#5b6f99]">先看用户会不会约 Quick Call、打开轻诊断支付，再判断哪条路径更容易接住高意向线索。</p>
                   </div>
                 </div>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="mt-4 grid gap-4 md:grid-cols-4">
                   <div className="rounded-2xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-4">
                     <p className="text-xs font-semibold tracking-[0.08em] text-[#1f6a3b]">点击真实案例</p>
                     <p className="mt-2 text-3xl font-semibold text-[#154d2c]">{data.overview.caseClick}</p>
@@ -449,12 +460,17 @@ export default function DashboardPage() {
                   <div className="rounded-2xl border border-[#d6ddf3] bg-[linear-gradient(145deg,#f8faff_0%,#f3f6ff_52%,#fbfcff_100%)] p-4">
                     <p className="text-xs font-semibold tracking-[0.08em] text-[#244783]">预约 quick call</p>
                     <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.quickCallClick}</p>
-                    <p className="mt-2 text-sm text-[#5b6f99]">看用户是不是只抗拒微信，而不是抗拒进一步交流。</p>
+                    <p className="mt-2 text-sm text-[#5b6f99]">看主路径能不能接住“想先确认优先级”的人。</p>
                   </div>
                   <div className="rounded-2xl border border-[#d9dff0] bg-[#f8fbff] p-4">
-                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">复制微信</p>
-                    <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.copyWechat}</p>
-                    <p className="mt-2 text-sm text-[#5b6f99]">这是最重的一步，能直接反映用户愿不愿意进入私聊关系。</p>
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">打开轻诊断支付</p>
+                    <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.lightDiagnosisPaymentOpen}</p>
+                    <p className="mt-2 text-sm text-[#5b6f99]">看有没有人愿意直接进入付费动作，而不是只预约。</p>
+                  </div>
+                  <div className="rounded-2xl border border-[#d9dff0] bg-[#f8fbff] p-4">
+                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">留资下载报告</p>
+                    <p className="mt-2 text-3xl font-semibold text-[#1d2f56]">{data.overview.downloadGateSubmit}</p>
+                    <p className="mt-2 text-sm text-[#5b6f99]">看有多少人选择先把报告带走，而不是立刻继续推进。</p>
                   </div>
                 </div>
               </div>
@@ -489,10 +505,12 @@ export default function DashboardPage() {
                         <th className="px-3 py-3 font-medium">线索等级</th>
                         <th className="px-3 py-3 font-medium">诊断报告</th>
                         <th className="px-3 py-3 font-medium">下载报告</th>
+                        <th className="px-3 py-3 font-medium">留资下载</th>
                         <th className="px-3 py-3 font-medium">点击案例</th>
                         <th className="px-3 py-3 font-medium">预约通话</th>
-                        <th className="px-3 py-3 font-medium">点击文章</th>
-                        <th className="px-3 py-3 font-medium">复制微信</th>
+                        <th className="px-3 py-3 font-medium">轻诊断点击</th>
+                        <th className="px-3 py-3 font-medium">支付弹窗</th>
+                        <th className="px-3 py-3 font-medium">付款后复制微信</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -532,9 +550,11 @@ export default function DashboardPage() {
                             )}
                           </td>
                           <td className="px-3 py-3">{row.downloadedReport ? "是" : "否"}</td>
+                          <td className="px-3 py-3">{row.downloadGateSubmitted ? "是" : "否"}</td>
                           <td className="px-3 py-3">{row.caseClicks > 0 ? row.caseClicks : "-"}</td>
                           <td className="px-3 py-3">{row.quickCallClicks > 0 ? row.quickCallClicks : "-"}</td>
-                          <td className="px-3 py-3">{row.articleClicks > 0 ? row.articleClicks : "-"}</td>
+                          <td className="px-3 py-3">{row.lightDiagnosisClicks > 0 ? row.lightDiagnosisClicks : "-"}</td>
+                          <td className="px-3 py-3">{row.lightDiagnosisPaymentOpened ? "是" : "否"}</td>
                           <td className="px-3 py-3">{row.copiedWechat ? "是" : "否"}</td>
                         </tr>
                       )})}
@@ -553,7 +573,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-semibold text-[#1d4684]">设备表现</h2>
-                  <p className="mt-1 text-sm text-[#5b6f99]">看移动端占比，以及移动端和桌面端在提交、下载、复制微信上的差异。</p>
+                  <p className="mt-1 text-sm text-[#5b6f99]">看移动端占比，以及移动端和桌面端在提交、下载和付款后继续动作上的差异。</p>
                 </div>
               </div>
               <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -574,7 +594,7 @@ export default function DashboardPage() {
                           <span className="font-semibold text-[#1d2f56]">{metric.downloadRate ?? "-"}%</span>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span>复制微信率</span>
+                          <span>付款后复制微信率</span>
                           <span className="font-semibold text-[#1d2f56]">{metric.copyRate ?? "-"}%</span>
                         </div>
                       </div>

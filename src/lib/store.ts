@@ -41,9 +41,16 @@ export type EventType =
   | "submit_url"
   | "result_generated"
   | "download_report"
+  | "open_download_gate"
+  | "submit_download_gate"
+  | "close_download_gate"
   | "click_article"
   | "click_case"
   | "click_quick_call"
+  | "click_light_diagnosis"
+  | "open_light_diagnosis_payment"
+  | "copy_wechat_after_payment"
+  | "close_light_diagnosis_payment"
   | "copy_wechat"
   | "quota_exceeded";
 
@@ -133,12 +140,18 @@ type DailySummary = {
   storageMode: "supabase" | "local";
   overview: {
     visitors: number;
+    effectiveSubmissionCount: number;
     submitUrl: number;
     resultGenerated: number;
     downloadReport: number;
+    downloadGateOpen: number;
+    downloadGateSubmit: number;
     articleClick: number;
     caseClick: number;
     quickCallClick: number;
+    lightDiagnosisClick: number;
+    lightDiagnosisPaymentOpen: number;
+    postPaymentWechatCopy: number;
     copyWechat: number;
     quotaExceeded: number;
   };
@@ -161,13 +174,20 @@ type DailySummary = {
     score: number | null;
     industry: string | null;
     downloadedReport: boolean;
+    downloadGateOpened: boolean;
+    downloadGateSubmitted: boolean;
     articleClicks: number;
     caseClicks: number;
     quickCallClicks: number;
+    lightDiagnosisClicks: number;
+    lightDiagnosisPaymentOpened: boolean;
     copiedWechat: boolean;
   }[];
   leads: LeadEntry[];
 };
+
+const INTERNAL_DOMAINS = ["mengqi.cc", "lp.mengqi.cc"];
+const REFERENCE_BRAND_DOMAINS = ["apple.com", "google.com", "notion.so", "figma.com", "openai.com", "stripe.com"];
 
 type DevicePerformance = {
   visitors: number;
@@ -231,6 +251,26 @@ function normalizeSummaryQuery(input?: string | SummaryQuery): SummaryQuery {
 
 function formatRangeLabel(from: string, to: string): string {
   return from === to ? from : `${from} 至 ${to}`;
+}
+
+function getHostname(url?: string): string {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function matchesDomain(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`);
+}
+
+function isEffectiveSubmissionUrl(url?: string): boolean {
+  const hostname = getHostname(url);
+  if (!hostname) return false;
+  return !INTERNAL_DOMAINS.some((domain) => matchesDomain(hostname, domain)) &&
+    !REFERENCE_BRAND_DOMAINS.some((domain) => matchesDomain(hostname, domain));
 }
 
 function resolveSummaryScope(queryInput?: string | SummaryQuery): {
@@ -398,11 +438,17 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   const submitUrl = events.filter((item) => item.type === "submit_url");
   const resultGenerated = events.filter((item) => item.type === "result_generated");
   const downloadReport = events.filter((item) => item.type === "download_report");
+  const downloadGateOpen = events.filter((item) => item.type === "open_download_gate");
+  const downloadGateSubmit = events.filter((item) => item.type === "submit_download_gate");
   const articleClick = events.filter((item) => item.type === "click_article");
   const caseClick = events.filter((item) => item.type === "click_case");
   const quickCallClick = events.filter((item) => item.type === "click_quick_call");
-  const copyWechat = events.filter((item) => item.type === "copy_wechat");
+  const lightDiagnosisClick = events.filter((item) => item.type === "click_light_diagnosis");
+  const lightDiagnosisPaymentOpen = events.filter((item) => item.type === "open_light_diagnosis_payment");
+  const postPaymentWechatCopy = events.filter((item) => item.type === "copy_wechat_after_payment");
+  const copyWechat = events.filter((item) => item.type === "copy_wechat" || item.type === "copy_wechat_after_payment");
   const quotaExceeded = events.filter((item) => item.type === "quota_exceeded");
+  const effectiveSubmissionCount = submitUrl.filter((item) => isEffectiveSubmissionUrl(item.url)).length;
 
   const grouped = new Map<
     string,
@@ -414,9 +460,13 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
       score: number | null;
       industry: string | null;
       downloadedReport: boolean;
+      downloadGateOpened: boolean;
+      downloadGateSubmitted: boolean;
       articleClicks: number;
       caseClicks: number;
       quickCallClicks: number;
+      lightDiagnosisClicks: number;
+      lightDiagnosisPaymentOpened: boolean;
       copiedWechat: boolean;
     }
   >();
@@ -432,9 +482,13 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
         score: null,
         industry: null,
         downloadedReport: false,
+        downloadGateOpened: false,
+        downloadGateSubmitted: false,
         articleClicks: 0,
         caseClicks: 0,
         quickCallClicks: 0,
+        lightDiagnosisClicks: 0,
+        lightDiagnosisPaymentOpened: false,
         copiedWechat: false,
       });
     }
@@ -454,6 +508,16 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     if (current) current.downloadedReport = true;
   }
 
+  for (const entry of downloadGateOpen) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.downloadGateOpened = true;
+  }
+
+  for (const entry of downloadGateSubmit) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.downloadGateSubmitted = true;
+  }
+
   for (const entry of articleClick) {
     const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.articleClicks += 1;
@@ -467,6 +531,16 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
   for (const entry of quickCallClick) {
     const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
     if (current) current.quickCallClicks += 1;
+  }
+
+  for (const entry of lightDiagnosisClick) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.lightDiagnosisClicks += 1;
+  }
+
+  for (const entry of lightDiagnosisPaymentOpen) {
+    const current = grouped.get(`${entry.userKey}:${entry.url || "unknown"}`);
+    if (current) current.lightDiagnosisPaymentOpened = true;
   }
 
   for (const entry of copyWechat) {
@@ -501,8 +575,10 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     { label: "访问", count: totalVisitors },
     { label: "提交 URL", count: submitUrl.length },
     { label: "生成结果", count: resultGenerated.length },
-    { label: "下载报告", count: downloadReport.length },
-    { label: "复制微信", count: copyWechat.length },
+    { label: "预约 Quick Call", count: quickCallClick.length },
+    { label: "打开轻诊断支付", count: lightDiagnosisPaymentOpen.length },
+    { label: "支付后复制微信", count: postPaymentWechatCopy.length },
+    { label: "留资下载报告", count: downloadGateSubmit.length },
   ];
 
   const funnel = funnelCounts.map((item, index) => ({
@@ -515,12 +591,18 @@ function buildDailySummary(date: string, events: EventEntry[], leads: LeadEntry[
     storageMode: getStorageMode(),
     overview: {
       visitors: totalVisitors,
+      effectiveSubmissionCount,
       submitUrl: submitUrl.length,
       resultGenerated: resultGenerated.length,
       downloadReport: downloadReport.length,
+      downloadGateOpen: downloadGateOpen.length,
+      downloadGateSubmit: downloadGateSubmit.length,
       articleClick: articleClick.length,
       caseClick: caseClick.length,
       quickCallClick: quickCallClick.length,
+      lightDiagnosisClick: lightDiagnosisClick.length,
+      lightDiagnosisPaymentOpen: lightDiagnosisPaymentOpen.length,
+      postPaymentWechatCopy: postPaymentWechatCopy.length,
       copyWechat: copyWechat.length,
       quotaExceeded: quotaExceeded.length,
     },

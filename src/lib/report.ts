@@ -53,6 +53,10 @@ export function buildReportHtml({
       .footer { margin-top: 34px; background: linear-gradient(145deg, #1d2c56 0%, #26396f 58%, #192447 100%); color: #e7eeff; border-radius: 24px; padding: 28px; }
       .footer h3 { margin: 0 0 10px; font-size: 28px; line-height: 1.3; }
       .footer p { margin: 0; font-size: 15px; line-height: 1.9; color: #d6e0ff; }
+      .cta-block { margin-top: 16px; padding: 16px 18px; border-radius: 18px; border: 1px solid rgba(214, 224, 255, 0.16); background: rgba(255,255,255,0.06); }
+      .cta-block strong { color: #fff; }
+      .bullets { margin: 10px 0 0; padding-left: 18px; color: #d6e0ff; }
+      .bullets li { margin-top: 6px; }
       .contact { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(214, 224, 255, 0.2); }
       .contact p + p { margin-top: 8px; }
       .contact strong { color: #fff; }
@@ -89,14 +93,23 @@ export function buildReportHtml({
       </div>
 
       <div class="footer">
-        <div class="eyebrow" style="color:#b9c8f5;">继续深度诊断</div>
-        <h3>你别猜了，找Mengqi先把最值得的那一块改对。</h3>
-        <p>自动结果只能帮你定位方向。人工诊断会直接告诉你：先改哪一块、为什么先改、改完先看什么。</p>
+        <div class="eyebrow" style="color:#b9c8f5;">下一步</div>
+        <h3>这份 PDF 适合存档和内部讨论，不等于完整诊断。</h3>
+        <p>如果你想确认“到底先改哪一个最值”，优先走下面两条路径，而不是只把报告带走。</p>
+        <div class="cta-block">
+          <p><strong>免费15分钟 1:1 确认优先级 #1：</strong><a href="https://calendly.com/mengqi-pmq/15min" style="color:#fff; text-decoration:underline;">预约 Quick Call</a></p>
+          <p>我会从这 3 个问题里，帮你先挑出最该改的那 1 个，并给你专属修改优先级建议。</p>
+        </div>
+        <div class="cta-block">
+          <p><strong>48h 轻诊断：</strong>扫码支付后添加微信 <strong>${escapeHtml(wechatId)}</strong>，把支付截图和页面链接发我继续推进。</p>
+          <ul class="bullets">
+            <li>Top 3 完整优先级排序</li>
+            <li>关键页面修改方向</li>
+            <li>一份可直接执行的行动清单</li>
+          </ul>
+        </div>
         <div class="contact">
-          <p><strong>适合项目：</strong>已经准备改版、投流，或知道页面有问题但不确定先改哪一块的项目。</p>
-          <p><strong>想先看看我是怎么分析转化问题的：</strong><a href="https://quaily.com/overseas/p/landing-page-structure-and-golden-rule" style="color:#fff; text-decoration:underline;">查看我如何分析转化问题</a></p>
-          <p><strong>先约个 Quick Call：</strong><a href="https://calendly.com/mengqi-pmq/15min" style="color:#fff; text-decoration:underline;">先约 15 分钟聊清楚你现在最卡的地方</a></p>
-          <p><strong>微信号：</strong>${escapeHtml(wechatId)}</p>
+          <p><strong>文章方法论：</strong><a href="https://quaily.com/overseas/p/landing-page-structure-and-golden-rule" style="color:#fff; text-decoration:underline;">查看我如何分析转化问题</a></p>
         </div>
       </div>
     </div>
