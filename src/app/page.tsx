@@ -15,13 +15,13 @@ type State = {
   quotaExceeded: boolean;
   downloadGateOpen: boolean;
   downloadContact: string;
+  lightDiagnosisGateOpen: boolean;
+  wechatCopied: boolean;
 };
 
 const WECHAT_ID = "daqi029";
 const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://calendly.com/mengqi-pmq/15min";
-const LIGHT_DIAGNOSIS_URL =
-  process.env.NEXT_PUBLIC_LIGHT_DIAGNOSIS_URL ||
-  "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ME9TFJ8B3HVXS";
+const ALIPAY_LIGHT_DIAGNOSIS_IMAGE = "/alipay-light-diagnosis.jpg";
 const SOCIAL_PROOF = {
   visits: 161,
   submissions: 99,
@@ -73,6 +73,8 @@ export default function Home() {
     quotaExceeded: false,
     downloadGateOpen: false,
     downloadContact: "",
+    lightDiagnosisGateOpen: false,
+    wechatCopied: false,
   });
   const [stageIndex, setStageIndex] = useState(0);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
@@ -225,7 +227,7 @@ export default function Home() {
   }
 
   function handleClickLightDiagnosis() {
-    if (!state.result || !LIGHT_DIAGNOSIS_URL) return;
+    if (!state.result) return;
 
     track("click_light_diagnosis", {
       url: normalizeInputUrl(state.inputUrl),
@@ -246,6 +248,21 @@ export default function Home() {
         industry: state.result.industry,
       }),
     }).catch(() => undefined);
+
+    setState((prev) => ({ ...prev, lightDiagnosisGateOpen: true, wechatCopied: false }));
+  }
+
+  function handleCloseLightDiagnosisGate() {
+    setState((prev) => ({ ...prev, lightDiagnosisGateOpen: false, wechatCopied: false }));
+  }
+
+  async function handleCopyWechat() {
+    try {
+      await navigator.clipboard.writeText(WECHAT_ID);
+      setState((prev) => ({ ...prev, wechatCopied: true }));
+    } catch {
+      setState((prev) => ({ ...prev, wechatCopied: false }));
+    }
   }
 
 
@@ -572,21 +589,13 @@ export default function Home() {
                       <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>每个问题的具体修改方向和建议</li>
                       <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>一份可直接执行的行动清单</li>
                     </ul>
-                    {LIGHT_DIAGNOSIS_URL ? (
-                      <a
-                        href={LIGHT_DIAGNOSIS_URL}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={handleClickLightDiagnosis}
-                        className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)] transition hover:bg-[#f9fbff]"
-                      >
-                        直接购买轻诊断
-                      </a>
-                    ) : (
-                      <div className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)]">
-                        直接购买轻诊断
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      onClick={handleClickLightDiagnosis}
+                      className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)] transition hover:bg-[#f9fbff]"
+                    >
+                      立即购买轻诊断
+                    </button>
                     <details className="mt-5 border-t border-[#e2e8f6] pt-5">
                       <summary className="group cursor-pointer list-none text-center text-[15px] font-medium text-[#7486a8] transition hover:text-[#4f658d]">
                         <span className="inline-flex items-center gap-2">
@@ -710,6 +719,62 @@ export default function Home() {
               >
                 下载报告
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {state.lightDiagnosisGateOpen && state.result ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(19,33,62,0.56)] px-4 py-8">
+            <div className="w-full max-w-md rounded-[28px] border border-[#d8e1f3] bg-white p-6 shadow-[0_24px_60px_rgba(18,35,75,0.24)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold tracking-[0.12em] text-[#7183a8]">48h 轻诊断付款</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-[#1d2f55]">扫码支付后，加我微信继续推进</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseLightDiagnosisGate}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d4dcef] text-[#6b7ea5] transition hover:border-[#b8c7e8] hover:text-[#244783]"
+                  aria-label="关闭"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-[24px] border border-[#d9e3f5] bg-[#f7f9fd]">
+                <Image
+                  src={ALIPAY_LIGHT_DIAGNOSIS_IMAGE}
+                  alt="支付宝收款二维码"
+                  width={640}
+                  height={853}
+                  className="h-auto w-full"
+                />
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-[#dbe4f5] bg-[#fbfcff] p-4">
+                <p className="text-sm leading-7 text-[#51658e]">
+                  付款完成后，添加微信 <span className="font-semibold text-[#1d2f55]">{WECHAT_ID}</span>，并把支付截图和页面链接发我，我会直接在微信里跟你确认和推进。
+                </p>
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={handleCopyWechat}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-[#223567] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1b2b54]"
+                  >
+                    复制微信号
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCloseLightDiagnosisGate}
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-[#d4dcef] bg-white px-5 py-3 text-sm font-semibold text-[#3d517b] transition hover:bg-[#f8fbff]"
+                  >
+                    我知道了
+                  </button>
+                </div>
+                {state.wechatCopied ? (
+                  <p className="mt-3 text-sm text-[#2f7a57]">微信号已复制，付款后把截图和页面链接发我就行。</p>
+                ) : null}
+              </div>
             </div>
           </div>
         ) : null}
