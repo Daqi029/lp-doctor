@@ -5,7 +5,6 @@ import Image from "next/image";
 import { track } from "@vercel/analytics";
 import type { AnalyzeResponse, AnalyzeResult } from "@/lib/types";
 import { buildReportHtml } from "@/lib/report";
-import { getRecommendedArticles } from "@/lib/articles";
 
 type State = {
   loading: boolean;
@@ -13,12 +12,16 @@ type State = {
   result: AnalyzeResult | null;
   quotaText: string;
   inputUrl: string;
-  leadSent: boolean;
   quotaExceeded: boolean;
+  downloadGateOpen: boolean;
+  downloadContact: string;
 };
 
 const WECHAT_ID = "daqi029";
 const QUICK_CALL_URL = process.env.NEXT_PUBLIC_QUICK_CALL_URL || "https://calendly.com/mengqi-pmq/15min";
+const LIGHT_DIAGNOSIS_URL =
+  process.env.NEXT_PUBLIC_LIGHT_DIAGNOSIS_URL ||
+  "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=ME9TFJ8B3HVXS";
 const SOCIAL_PROOF = {
   visits: 161,
   submissions: 99,
@@ -47,53 +50,17 @@ function getDisplayScore(score: number): number {
   return Math.round(55 + ((clamped - 40) * 30) / 31);
 }
 
-function scoreTone(score: number): { text: string } {
-  if (score < 60) return { text: "text-[#b42828]" };
-  if (score < 75) return { text: "text-[#9a6a07]" };
-  return { text: "text-[#13663f]" };
+function scoreTone(score: number): { text: string; accent: string; track: string } {
+  if (score < 60) return { text: "text-[#b42828]", accent: "#d63b3b", track: "#f3d9d9" };
+  if (score < 75) return { text: "text-[#9a6a07]", accent: "#c98710", track: "#f6ead1" };
+  return { text: "text-[#13663f]", accent: "#2d9b68", track: "#dcefe6" };
 }
 
-function scoreEmotionCopy(score: number): { label: string; detail: string } {
-  if (score <= 59) {
-    return { label: "接不住增长", detail: "继续投流就是继续浪费" };
-  }
-  if (score <= 64) {
-    return { label: "问题很重", detail: "再拖下去只会越投越亏" };
-  }
-  if (score <= 74) {
-    return { label: "急需整改", detail: "别再一边漏水一边加流量" };
-  }
-  if (score <= 84) {
-    return { label: "有点底子", detail: "但关键转化点还没打透" };
-  }
-  return { label: "还不错", detail: "但还没优化到可以放心放量" };
-}
-
-function priorityAreaLabel(category: AnalyzeResult["suggestions"][number]["category"]): string {
-  switch (category) {
-    case "value_clarity_first":
-    case "fallback_value_prop":
-      return "首屏价值表达";
-    case "reduce_cognitive_load":
-    case "fallback_structure":
-      return "页面结构与信息负担";
-    case "activation_path_visible":
-    case "fallback_cta":
-      return "CTA 路径与动作说明";
-    case "outcome_over_feature":
-      return "结果表达";
-    case "trust_acceleration":
-    case "fallback_trust":
-      return "信任证据";
-    case "friction_kill":
-      return "行动阻力";
-    case "positioning_density":
-      return "目标用户定位";
-    case "fallback_copy":
-      return "文案表达";
-    default:
-      return "首屏价值表达";
-  }
+function scorePotentialLabel(score: number): string {
+  if (score <= 59) return "很高";
+  if (score <= 74) return "较高";
+  if (score <= 84) return "中高";
+  return "稳定";
 }
 
 export default function Home() {
@@ -103,8 +70,9 @@ export default function Home() {
     result: null,
     quotaText: "每日可免费诊断 2 次",
     inputUrl: "",
-    leadSent: false,
     quotaExceeded: false,
+    downloadGateOpen: false,
+    downloadContact: "",
   });
   const [stageIndex, setStageIndex] = useState(0);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
@@ -130,10 +98,9 @@ export default function Home() {
 
   const displayScore = state.result ? getDisplayScore(state.result.score) : 0;
   const scoreStyle = scoreTone(displayScore);
-  const scoreEmotion = scoreEmotionCopy(displayScore);
-  const recommendedArticles = state.result ? getRecommendedArticles(state.result.suggestions) : [];
+  const scorePotential = scorePotentialLabel(displayScore);
   const isSpecialResult = Boolean(state.result?.specialMode);
-  const firstSuggestion = state.result?.suggestions[0] ?? null;
+  const scoreRingDegrees = Math.max(0, Math.min(360, Math.round((displayScore / 100) * 360)));
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -149,7 +116,6 @@ export default function Home() {
       ...prev,
       loading: true,
       error: "",
-      leadSent: false,
       quotaExceeded: false,
       result: null,
     }));
@@ -206,69 +172,6 @@ export default function Home() {
     }
   }
 
-  async function handleCopyWechat() {
-    if (!state.result) return;
-    track("click_contact", {
-      url: normalizeInputUrl(state.inputUrl),
-      score: state.result.score,
-      percentile: state.result.percentile,
-    });
-
-    try {
-      await fetch("/api/lead", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: normalizeInputUrl(state.inputUrl),
-          score: state.result.score,
-          percentile: state.result.percentile,
-          industry: state.result.industry,
-          summary: state.result.summary,
-        }),
-      });
-    } catch {
-      // keep UX smooth even if telemetry fails
-    }
-
-    try {
-      await navigator.clipboard.writeText(WECHAT_ID);
-    } catch {
-      // ignore clipboard errors
-    }
-
-    setState((prev) => ({ ...prev, leadSent: true }));
-  }
-
-  function handleClickArticle(article: { slug: string; label: string }, position: number) {
-    if (!state.result) return;
-
-    track("click_article", {
-      article_slug: article.slug,
-      article_label: article.label,
-      article_position: position,
-      url: normalizeInputUrl(state.inputUrl),
-      score: state.result.score,
-      percentile: state.result.percentile,
-      industry: state.result.industry,
-    });
-
-    void fetch("/api/event", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      keepalive: true,
-      body: JSON.stringify({
-        type: "click_article",
-        url: normalizeInputUrl(state.inputUrl),
-        score: state.result.score,
-        percentile: state.result.percentile,
-        industry: state.result.industry,
-        articleSlug: article.slug,
-        articleLabel: article.label,
-        articlePosition: position,
-      }),
-    }).catch(() => undefined);
-  }
-
   function handleClickCase(caseLabel: string, position: number) {
     if (!state.result) return;
 
@@ -321,6 +224,30 @@ export default function Home() {
     }).catch(() => undefined);
   }
 
+  function handleClickLightDiagnosis() {
+    if (!state.result || !LIGHT_DIAGNOSIS_URL) return;
+
+    track("click_light_diagnosis", {
+      url: normalizeInputUrl(state.inputUrl),
+      score: state.result.score,
+      percentile: state.result.percentile,
+      industry: state.result.industry,
+    });
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
+        type: "click_light_diagnosis",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+      }),
+    }).catch(() => undefined);
+  }
+
 
   async function handleDevReset() {
     const response = await fetch("/api/dev-reset", { method: "POST" });
@@ -330,7 +257,6 @@ export default function Home() {
       quotaText: "每日可免费诊断 2 次",
       quotaExceeded: false,
       error: "",
-      leadSent: false,
     }));
   }
 
@@ -364,6 +290,14 @@ export default function Home() {
     link.click();
     link.remove();
     URL.revokeObjectURL(fileUrl);
+  }
+
+  function handleOpenDownloadGate() {
+    setState((prev) => ({ ...prev, downloadGateOpen: true }));
+  }
+
+  function handleCloseDownloadGate() {
+    setState((prev) => ({ ...prev, downloadGateOpen: false }));
   }
 
   return (
@@ -549,93 +483,134 @@ export default function Home() {
               </div>
             ) : (
               <>
-                <div className="grid gap-6 border-b border-[#e3e8f5] pb-6 lg:grid-cols-[1.35fr_0.65fr]">
-                  <div>
-                    <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">结果总览</p>
-                    <h2 className="mt-3 text-[30px] font-semibold leading-tight text-[#17376e] md:text-[32px]">这是当前最影响你转化的 3 个问题</h2>
-                    <p className="mt-5 text-[17px] leading-8 text-[#46587d]">{state.result.summary}</p>
-                    <div className="mt-7 bg-[#fff7f7] pl-5">
-                      <div className="border-l-4 border-[#ff4d4f] py-4 pl-6">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <p className="text-sm font-semibold text-[#d73030]">最优先先改</p>
-                          <p className="text-[18px] font-semibold text-[#b42828]">
-                            {firstSuggestion ? priorityAreaLabel(firstSuggestion.category) : "首屏价值表达"}
-                          </p>
-                        </div>
-                        <p className="mt-3 text-[15px] leading-7 text-[#4f4a5f]">
-                          {firstSuggestion?.impact || "如果用户在前 3 秒看不懂“这是给谁的、能带来什么结果”，后面的内容很难继续发挥作用。"}
-                        </p>
+                <div className="mx-auto max-w-5xl space-y-10 border-b border-[#e3e8f5] pb-10">
+                  <div className="flex flex-col items-center text-center">
+                    <div
+                      className="flex h-40 w-40 items-center justify-center rounded-full shadow-[0_10px_30px_rgba(65,89,138,0.08)]"
+                      style={{
+                        background: `conic-gradient(from -90deg, ${scoreStyle.accent} 0deg ${scoreRingDegrees}deg, ${scoreStyle.track} ${scoreRingDegrees}deg 360deg)`,
+                      }}
+                    >
+                      <div className="flex h-[calc(100%-20px)] w-[calc(100%-20px)] flex-col items-center justify-center rounded-full bg-white">
+                        <p className={`text-5xl font-semibold leading-none ${scoreStyle.text}`}>{displayScore}</p>
+                        <p className="mt-2 text-sm font-semibold text-[#62739a]">优化潜力值</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="rounded-[28px] border border-[#dfe5f4] bg-white p-6 shadow-[0_12px_30px_rgba(45,73,131,0.05)]">
-                    <p className="text-sm font-semibold text-[#60729a]">当前转化表现</p>
-                    <div className="mt-5 flex items-end gap-2">
-                      <p className={`text-5xl font-semibold leading-none ${scoreStyle.text}`}>{displayScore}</p>
-                      <p className="pb-1 text-[18px] font-medium text-[#8a95ac]">/ 100</p>
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-2.5">
-                      <span className="inline-flex items-center rounded-xl bg-[#fdeeee] px-3 py-1.5 text-sm font-semibold text-[#d12d2d]">
-                        {scoreEmotion.label}
-                      </span>
-                      <span className="inline-flex items-center rounded-xl bg-[#fff4dd] px-3 py-1.5 text-sm font-semibold text-[#d68400]">
-                        {scoreEmotion.detail}
-                      </span>
-                    </div>
-                    <p className="mt-6 text-[15px] leading-8 text-[#526583]">
+                    <h2 className="mt-8 text-[28px] font-semibold leading-tight text-[#17376e] md:text-[40px]">
+                      转化优化潜力：{scorePotential}
+                    </h2>
+                    <p className="mt-4 max-w-3xl text-[17px] leading-8 text-[#5b6f96]">
                       基础结构已经具备，但还存在几个会直接影响转化的关键问题。优先解决下面这 3 个点，通常比继续堆内容更有效。
                     </p>
                   </div>
-                </div>
 
-                <div className="space-y-3">
-                  {state.result.suggestions.map((item, index) => (
-                    <article key={item.title} className="rounded-2xl border border-[#e1e6f3] bg-[#fcfdff] p-5">
-                      <p className="text-xs font-semibold tracking-[0.08em] text-[#60729a]">问题 {index + 1}</p>
-                      <h3 className="mt-2 text-xl font-semibold leading-8 text-[#1d4684]">{item.title}</h3>
-                      <p className="mt-3 text-[15px] leading-7 text-[#32425f]">{item.issue}</p>
-                      <div className="mt-4 space-y-3 text-sm leading-7 text-[#31415e]">
-                        <div>
-                          <p className="font-semibold text-[#1f355f]">为什么这会影响转化</p>
-                          <p className="mt-1">{item.impact}</p>
+                  <div className="rounded-[28px] border border-[#e1e6f3] bg-[#fcfdff] p-6 shadow-[0_12px_28px_rgba(45,73,131,0.06)] md:p-8">
+                    <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.08em] text-[#7c8db1]">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[#cdd8f1] text-[11px]">!</span>
+                      TOP 3 阻塞点
+                    </div>
+                    <div className="mt-5 space-y-5">
+                      {state.result.suggestions.map((item, index) => (
+                        <div key={item.title} className="flex gap-4">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#fff2f2] text-sm font-semibold text-[#ff5a5f]">
+                            {index + 1}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-[22px] font-semibold leading-8 text-[#1d2f55]">{item.title}</h3>
+                            <p className="mt-1 text-[16px] leading-7 text-[#62739a]">{item.impact}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-[#1f355f]">在这个页面里的体现</p>
-                          <p className="mt-1">{item.evidence}</p>
-                        </div>
-                        <div className="rounded-xl border border-[#dce8ff] bg-[#f5f9ff] px-4 py-3">
-                          <p className="font-semibold text-[#1f355f]">建议先做什么</p>
-                          <p className="mt-1 text-[#40557e]">{item.action}</p>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl border border-[#dfe5f3] bg-[linear-gradient(180deg,#f9fbff_0%,#ffffff_100%)] p-5 shadow-[0_12px_28px_rgba(45,73,131,0.06)]">
-                  <h3 className="text-xl font-semibold text-[#1d4684]">这份快速检测能帮你发现明显问题，但不是完整诊断</h3>
-                  <div className="mt-3 space-y-2 text-[15px] leading-7 text-[#415273]">
-                    <p>这份检测适合帮你快速看见页面里最影响转化的明显问题。</p>
-                    <p>如果你想进一步判断问题到底出在 offer、CTA、信任结构还是整体页面逻辑，就需要更完整的诊断。</p>
-                  </div>
-                  <div className="mt-5 border-t border-[#e3e9f7] pt-5">
-                    <h4 className="text-lg font-semibold text-[#1d4684]">想看看我是怎么分析转化问题的？</h4>
-                    <p className="mt-2 max-w-3xl text-[15px] leading-7 text-[#415273]">你可以先看看我平时是怎么判断 Landing Page 问题的。</p>
-                    <div className="mt-4">
-                      <a
-                        href="https://quaily.com/overseas/p/landing-page-structure-and-golden-rule"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-xl border border-[#b8c7ea] bg-[#f6f9ff] px-4 py-2.5 text-sm font-medium text-[#244783] transition hover:bg-[#edf3ff]"
-                      >
-                        查看我如何分析转化问题
-                      </a>
+                      ))}
                     </div>
                   </div>
+
+                  <div className="flex flex-col items-center text-center">
+                    <p className="max-w-3xl text-base font-semibold leading-7 text-[#1d2f55] md:text-lg">
+                      这 3 个问题里，先改对 1 个，转化才会真正往上走。
+                    </p>
+                    <h3 className="mt-5 text-[28px] font-semibold leading-tight text-[#1d2f55] md:mt-6 md:text-[36px]">
+                      先确认，现在最该改哪一个
+                    </h3>
+                    <p className="mt-4 max-w-2xl text-[17px] leading-8 text-[#62739a]">
+                      15分钟里，我会直接帮你排出优先级 #1。
+                    </p>
+                    <a
+                      href={QUICK_CALL_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={handleClickQuickCall}
+                      className="mt-7 inline-flex w-full max-w-[560px] items-center justify-center rounded-2xl bg-[#3368ea] px-6 py-4 text-lg font-semibold text-white shadow-[0_18px_35px_rgba(51,104,234,0.26)] transition hover:bg-[#295bda]"
+                    >
+                      免费15分钟 1:1 确认优先级 #1 →
+                    </a>
+                    <p className="mt-4 max-w-3xl text-sm leading-7 text-[#6f819f]">
+                      <span className="mr-1 text-[#30a46c]">◉</span>
+                      不推销，结束后你会直接拿到专属修改建议。
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-[#b4bfd4]">
+                    <div className="h-px flex-1 bg-[#e1e6f3]" />
+                    <p className="text-sm font-semibold">或者</p>
+                    <div className="h-px flex-1 bg-[#e1e6f3]" />
+                  </div>
+
+                  <div className="rounded-[28px] border border-[#e6ebf7] bg-[#f7f9fd] p-6 shadow-[0_12px_28px_rgba(45,73,131,0.05)] md:p-8">
+                    <p className="inline-flex rounded-lg bg-[#e9eef8] px-3 py-1 text-sm font-semibold text-[#66789d]">想直接推进？</p>
+                    <h3 className="mt-4 text-[28px] font-semibold leading-tight text-[#1d2f55] md:text-[36px]">
+                      直接拿 48h 异步轻诊断
+                    </h3>
+                    <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <p className="text-[28px] font-semibold leading-none text-[#1d2f55]">$199</p>
+                      <p className="rounded-full bg-[#fff2dc] px-3 py-1 text-sm font-semibold text-[#9a6a07]">本周仅剩 4 个名额</p>
+                    </div>
+                    <p className="mt-4 text-[17px] leading-8 text-[#62739a]">
+                      专为像你这样已经跑过诊断、想立刻行动的人设计。48 小时内我会基于这页当前最关键的 3 个问题，直接给出推进建议。
+                    </p>
+                    <ul className="mt-5 space-y-3 text-[16px] leading-7 text-[#40557e]">
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>基于这页当前状态的 Top 3 完整优先级排序</li>
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>每个问题的具体修改方向和建议</li>
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>一份可直接执行的行动清单</li>
+                    </ul>
+                    {LIGHT_DIAGNOSIS_URL ? (
+                      <a
+                        href={LIGHT_DIAGNOSIS_URL}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={handleClickLightDiagnosis}
+                        className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)] transition hover:bg-[#f9fbff]"
+                      >
+                        直接购买轻诊断
+                      </a>
+                    ) : (
+                      <div className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)]">
+                        直接购买轻诊断
+                      </div>
+                    )}
+                    <details className="mt-5 border-t border-[#e2e8f6] pt-5">
+                      <summary className="group cursor-pointer list-none text-center text-[15px] font-medium text-[#7486a8] transition hover:text-[#4f658d]">
+                        <span className="inline-flex items-center gap-2">
+                          我适合预约，还是直接买轻诊断？
+                          <span aria-hidden="true" className="text-xs transition group-hover:translate-y-0.5">▾</span>
+                        </span>
+                      </summary>
+                      <div className="mt-3 space-y-2 text-center text-sm leading-7 text-[#62739a]">
+                        <p>
+                          <span className="font-semibold text-[#1d2f55]">Quick Call：</span>
+                          回答的是：“我现在最该先动哪一块？”
+                        </p>
+                        <p>
+                          <span className="font-semibold text-[#1d2f55]">48h 轻诊断：</span>
+                          回答的是：“你直接告诉我该怎么推进，我照着做。”
+                        </p>
+                      </div>
+                    </details>
+                  </div>
                 </div>
 
-                <h2 className="text-xl font-semibold text-[#1d4684]">真实案例</h2>
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="mx-auto max-w-5xl space-y-6">
+                  <h2 className="text-center text-xl font-semibold text-[#1d4684]">实际案例</h2>
+                  <div className="grid gap-3 md:grid-cols-3">
                   <a
                     href="https://x.com/jaredliu_bravo/status/1836239276549546293"
                     target="_blank"
@@ -677,106 +652,66 @@ export default function Home() {
                       真正拖慢改版的，往往不是没人发现问题，而是不知道该先改哪一块最值。这也是人工诊断最有价值的地方。
                     </p>
                   </div>
-                </div>
-
-                <div className="rounded-3xl border border-[#4f6097] bg-[linear-gradient(145deg,#1d2c56_0%,#26396f_58%,#192447_100%)] p-8 text-[#e7eeff] shadow-[0_24px_60px_rgba(23,36,78,0.36)] md:p-10">
-                  <div className="max-w-5xl">
-                    <p className="text-xs font-semibold tracking-[0.1em] text-[#b9c8f5]">继续深度诊断</p>
-                    <h2 className="mt-3 text-[30px] font-semibold leading-tight text-white md:text-[42px]">
-                      想进一步聊聊你的页面？
-                    </h2>
-                    <div className="mt-5 max-w-4xl">
-                      <p className="text-[16px] leading-8 text-[#d8e2ff]">
-                        如果你想知道最该先改什么，可以预约一个 Quick Call。我会帮你快速判断问题方向和下一步优先级。
-                      </p>
-                    </div>
-
-                    <div className="mt-8">
-                      <a
-                        href={QUICK_CALL_URL}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={handleClickQuickCall}
-                        className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 text-base font-semibold text-[#1f2f55] shadow-[0_12px_28px_rgba(18,29,62,0.18)] transition hover:bg-[#eef3ff]"
-                      >
-                        预约 Quick Call
-                      </a>
-                      <p className="mt-4 text-[15px] text-[#b8c8f4]">适合已经有页面、想认真提升转化的人。</p>
-                    </div>
                   </div>
 
-                  <div className="mt-10 border-t border-[#43598f] pt-8">
-                    <p className="text-sm font-semibold text-[#b9c8f5]">更习惯微信？</p>
-                    <div className="mt-4 flex flex-wrap items-center gap-4">
-                      <p className="text-[17px] font-semibold text-white">微信号：{WECHAT_ID}</p>
-                      <button
-                        type="button"
-                        onClick={handleCopyWechat}
-                        className="rounded-xl border border-[#6276ad] bg-transparent px-5 py-2.5 text-sm font-medium text-[#e7eeff] transition hover:bg-[#304579]"
-                      >
-                        复制微信号
-                      </button>
-                    </div>
-                  </div>
-                  {state.leadSent ? (
-                    <p className="mt-4 text-sm text-[#d4defa]">微信号已复制。如果你更想直接聊，把页面链接发我就行。</p>
-                  ) : null}
-                </div>
-
-                <div className="rounded-2xl border border-[#dce4f4] bg-[#f8fbff] p-5">
-                  <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">先保存结果</p>
-                  <p className="mt-2 text-base font-semibold text-[#203762]">下载完整诊断报告，方便你后续改版和内部讨论</p>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5c6f96]">
-                    这份报告会保留当前分数、问题判断和 3 个优先修改方向。适合发给团队成员、设计师或合作伙伴一起讨论。
-                  </p>
-                  <div className="mt-4 flex justify-start">
+                  <div className="border-t border-[#dbe3f4] pt-5 text-center">
                     <button
                       type="button"
-                      onClick={handleDownloadReport}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#2f4786] bg-[#223567] px-5 py-3 text-sm font-medium text-white shadow-[0_14px_28px_rgba(34,53,103,0.18)] transition hover:bg-[#1b2b54]"
+                      onClick={handleOpenDownloadGate}
+                      className="inline-flex items-center justify-center gap-2 text-sm font-medium text-[#647aa6] transition hover:text-[#244783]"
                     >
                       <span aria-hidden="true" className="text-base leading-none">↓</span>
-                      下载完整诊断报告
+                      下载完整诊断报告（仅供存档）
                     </button>
                   </div>
                 </div>
-
-                {recommendedArticles.length > 0 ? (
-                  <div className="border-t border-[#dbe3f4] pt-5">
-                    <div className="flex flex-col gap-2">
-                      <p className="text-xs font-semibold tracking-[0.1em] text-[#60729a]">继续自己改</p>
-                      <h3 className="text-lg font-semibold text-[#1d2f56]">如果你想继续自己改，可以先看这两篇</h3>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      {recommendedArticles.map((article, index) => (
-                        <a
-                          key={article.slug}
-                          href={article.href}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => handleClickArticle(article, index + 1)}
-                          className="group overflow-hidden rounded-2xl border border-[#d8e1f3] bg-white transition hover:-translate-y-0.5 hover:border-[#b7c6e8] hover:shadow-[0_16px_34px_rgba(45,73,131,0.08)]"
-                        >
-                          <div className="border-b border-[#e7edf8] bg-[linear-gradient(135deg,#f8fbff_0%,#eef4ff_100%)] px-4 py-3">
-                            <p className="text-[11px] font-semibold tracking-[0.08em] text-[#6a7ea8]">{article.label}</p>
-                          </div>
-                          <div className="px-4 py-4">
-                            <p className="text-base font-semibold leading-7 text-[#1f355f] transition group-hover:text-[#16376e]">{article.title}</p>
-                            <p className="mt-2 text-sm leading-6 text-[#60729a]">{article.reason}</p>
-                            <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#244783]">
-                              打开文章
-                              <span aria-hidden="true">↗</span>
-                            </span>
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </>
             )}
           </section>
+        ) : null}
+
+        {state.downloadGateOpen && state.result ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(19,33,62,0.48)] px-4">
+            <div className="w-full max-w-md rounded-[28px] border border-[#d8e1f3] bg-white p-6 shadow-[0_24px_60px_rgba(18,35,75,0.2)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold tracking-[0.12em] text-[#7183a8]">先留个联系方式</p>
+                  <h3 className="mt-2 text-2xl font-semibold text-[#1d2f55]">填写微信或邮箱后下载报告</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseDownloadGate}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d4dcef] text-[#6b7ea5] transition hover:border-[#b8c7e8] hover:text-[#244783]"
+                  aria-label="关闭"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[#62739a]">
+                留一个你常用的微信号或邮箱，我们把这份报告发给你，也方便你后面继续回来对照修改。
+              </p>
+              <label className="mt-5 block text-sm font-medium text-[#41557d]">
+                微信号或邮箱
+                <input
+                  value={state.downloadContact}
+                  onChange={(e) => setState((prev) => ({ ...prev, downloadContact: e.target.value }))}
+                  placeholder="例如 daqi029 或 hello@company.com"
+                  className="mt-2 h-12 w-full rounded-2xl border border-[#cdd8ef] bg-[#fbfcff] px-4 text-sm text-[#1d2f55] outline-none transition focus:border-[#5f7db8] focus:ring-3 focus:ring-[#e4ecff]"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDownloadReport();
+                  handleCloseDownloadGate();
+                }}
+                disabled={!state.downloadContact.trim()}
+                className="mt-5 inline-flex w-full items-center justify-center rounded-2xl bg-[#223567] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[#1b2b54] disabled:cursor-not-allowed disabled:bg-[#c8d3ea] disabled:text-[#6d7fa3]"
+              >
+                下载报告
+              </button>
+            </div>
+          </div>
         ) : null}
         </section>
 
