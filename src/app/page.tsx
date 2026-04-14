@@ -95,10 +95,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    void fetch("/api/daily-summary?date=all")
+    void fetch("/api/social-proof")
       .then((response) => response.json())
-      .then((payload: { ok: boolean; data?: { overview?: { effectiveSubmissionCount?: number } } }) => {
-        const count = payload.data?.overview?.effectiveSubmissionCount;
+      .then((payload: { ok: boolean; data?: { effectiveSubmissionCount?: number } }) => {
+        const count = payload.data?.effectiveSubmissionCount;
         if (!payload.ok || typeof count !== "number") return;
         setState((prev) => ({ ...prev, socialProofSubmissions: count }));
       })
