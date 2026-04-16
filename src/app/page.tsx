@@ -17,7 +17,7 @@ type State = {
   downloadContact: string;
   lightDiagnosisGateOpen: boolean;
   wechatCopied: boolean;
-  socialProofSubmissions: number;
+  socialProofSubmissions: number | null;
 };
 
 const WECHAT_ID = "daqi029";
@@ -72,7 +72,7 @@ export default function Home() {
     downloadContact: "",
     lightDiagnosisGateOpen: false,
     wechatCopied: false,
-    socialProofSubmissions: 99,
+    socialProofSubmissions: null,
   });
   const [stageIndex, setStageIndex] = useState(0);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
@@ -461,8 +461,19 @@ export default function Home() {
           <>
           <section className="mt-3 rounded-3xl border border-[#d8dff1] bg-white/92 p-5 shadow-[0_14px_28px_rgba(55,79,132,0.06)]">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight text-[#203762] md:text-xl">
-                已有 {state.socialProofSubmissions} 个页面提交了诊断
+              <h2 className="flex flex-wrap items-end gap-x-2 gap-y-1 text-lg font-semibold tracking-tight text-[#203762] md:text-xl">
+                <span>已有</span>
+                {state.socialProofSubmissions === null ? (
+                  <span className="inline-block h-9 w-18 animate-pulse rounded-md bg-[#e7ecf8] align-middle" aria-label="正在加载提交总数" />
+                ) : (
+                  <span
+                    className="text-3xl leading-none text-[#1d355b] md:text-4xl"
+                    style={{ fontFamily: "\"Iowan Old Style\", \"Times New Roman\", Georgia, serif" }}
+                  >
+                    {state.socialProofSubmissions}
+                  </span>
+                )}
+                <span>个页面提交了诊断</span>
               </h2>
               <p className="mt-2 text-sm leading-6 text-[#5f7197]">
                 提交页面来自美国、中国、新加坡、香港、日本等市场。
