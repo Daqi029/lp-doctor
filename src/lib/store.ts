@@ -47,6 +47,7 @@ export type EventType =
   | "click_article"
   | "click_case"
   | "click_quick_call"
+  | "click_light_diagnosis_entry"
   | "click_light_diagnosis"
   | "open_light_diagnosis_payment"
   | "copy_wechat_after_payment"

@@ -250,6 +250,19 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       keepalive: true,
       body: JSON.stringify({
+        type: "click_light_diagnosis_entry",
+        url: normalizeInputUrl(state.inputUrl),
+        score: state.result.score,
+        percentile: state.result.percentile,
+        industry: state.result.industry,
+      }),
+    }).catch(() => undefined);
+
+    void fetch("/api/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({
         type: "click_light_diagnosis",
         url: normalizeInputUrl(state.inputUrl),
         score: state.result.score,
