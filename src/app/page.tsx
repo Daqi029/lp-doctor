@@ -643,61 +643,34 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-center text-center">
-                    <p className="max-w-3xl text-base font-semibold leading-7 text-[#1d2f55] md:text-lg">
-                      这 3 个问题里，先改对 1 个，转化才会真正往上走。
-                    </p>
-                    <h3 className="mt-5 text-[28px] font-semibold leading-tight text-[#1d2f55] md:mt-6 md:text-[36px]">
-                      先确认，现在最该改哪一个
-                    </h3>
-                    <p className="mt-4 max-w-2xl text-[17px] leading-8 text-[#62739a]">
-                      15分钟里，我会直接帮你排出优先级 #1。
-                    </p>
-                    <a
-                      href={QUICK_CALL_URL}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={handleClickQuickCall}
-                      className="mt-7 inline-flex w-full max-w-[560px] items-center justify-center rounded-2xl bg-[#3368ea] px-6 py-4 text-lg font-semibold text-white shadow-[0_18px_35px_rgba(51,104,234,0.26)] transition hover:bg-[#295bda]"
-                    >
-                      免费15分钟 1:1 确认优先级 #1 →
-                    </a>
-                    <p className="mt-4 max-w-3xl text-sm leading-7 text-[#6f819f]">
-                      <span className="mr-1 text-[#30a46c]">◉</span>
-                      不推销，结束后你会直接拿到专属修改建议。
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-[#b4bfd4]">
-                    <div className="h-px flex-1 bg-[#e1e6f3]" />
-                    <p className="text-sm font-semibold">或者</p>
-                    <div className="h-px flex-1 bg-[#e1e6f3]" />
-                  </div>
-
-                  <div className="rounded-[28px] border border-[#e6ebf7] bg-[#f7f9fd] p-6 shadow-[0_12px_28px_rgba(45,73,131,0.05)] md:p-8">
-                    <p className="inline-flex rounded-lg bg-[#e9eef8] px-3 py-1 text-sm font-semibold text-[#66789d]">想直接推进？</p>
+                  <div className="rounded-[30px] border border-[#d6dff3] bg-[linear-gradient(150deg,#f4f8ff_0%,#f6f9ff_42%,#fefcff_100%)] p-6 shadow-[0_14px_30px_rgba(45,73,131,0.1)] md:p-8">
+                    <p className="inline-flex rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold tracking-[0.06em] text-[#3d5f9f]">本周主推方案</p>
                     <h3 className="mt-4 text-[28px] font-semibold leading-tight text-[#1d2f55] md:text-[36px]">
-                      直接拿 48h 异步轻诊断
+                      轻诊断（48小时内交付）：先改哪一块，回报最高
                     </h3>
                     <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-                      <p className="text-[28px] font-semibold leading-none text-[#1d2f55]">$199</p>
+                      <p className="text-[30px] font-semibold leading-none text-[#17376e]">$199</p>
                       <p className="rounded-full bg-[#fff2dc] px-3 py-1 text-sm font-semibold text-[#9a6a07]">本周仅剩 4 个名额</p>
                     </div>
                     <p className="mt-4 text-[17px] leading-8 text-[#62739a]">
-                      专为像你这样已经跑过诊断、想立刻行动的人设计。48 小时内我会基于这页当前最关键的 3 个问题，直接给出推进建议。
+                      你只需要给我页面链接并完成一次 10 分钟对齐。48 小时内我会给你可直接执行的优化报告：改什么、怎么改、为什么改、预估提升区间。
                     </p>
                     <ul className="mt-5 space-y-3 text-[16px] leading-7 text-[#40557e]">
-                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>基于这页当前状态的 Top 3 完整优先级排序</li>
-                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>每个问题的具体修改方向和建议</li>
-                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>一份可直接执行的行动清单</li>
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>1 次 1v1：快速对齐你的主路径目标</li>
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>48h 执行报告：改什么 / 怎么改 / 为什么改</li>
+                      <li className="flex items-center gap-3"><span className="text-[#3974ea]">◎</span>1 次复盘讲解：确保你能按优先级推进</li>
                     </ul>
                     <button
                       type="button"
                       onClick={handleClickLightDiagnosis}
-                      className="mt-7 inline-flex w-full items-center justify-center rounded-2xl border border-[#d7deef] bg-white px-6 py-4 text-lg font-semibold text-[#1f2f55] shadow-[0_12px_24px_rgba(45,73,131,0.06)] transition hover:bg-[#f9fbff]"
+                      className="mt-7 inline-flex w-full items-center justify-center rounded-2xl bg-[#3368ea] px-6 py-4 text-lg font-semibold text-white shadow-[0_18px_35px_rgba(51,104,234,0.26)] transition hover:bg-[#295bda]"
                     >
-                      立即购买轻诊断
+                      支付 $199 获取 48h 轻诊断 →
                     </button>
+                    <p className="mt-4 text-sm leading-7 text-[#6f819f]">
+                      <span className="mr-1 text-[#30a46c]">◉</span>
+                      不含设计稿与代执行，专注给你可落地的判断与动作。
+                    </p>
                     <details className="mt-5 border-t border-[#e2e8f6] pt-5">
                       <summary className="group cursor-pointer list-none text-center text-[15px] font-medium text-[#7486a8] transition hover:text-[#4f658d]">
                         <span className="inline-flex items-center gap-2">
@@ -778,6 +751,19 @@ export default function Home() {
                   </div>
                   </div>
 
+                  <div className="text-center">
+                    <p className="text-sm text-[#6d7ea0]">还不确定是否直接开始？</p>
+                    <a
+                      href={QUICK_CALL_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={handleClickQuickCall}
+                      className="mt-2 inline-flex items-center justify-center text-sm font-semibold text-[#3d5f9f] underline underline-offset-4 transition hover:text-[#264a8a]"
+                    >
+                      先免费聊 15 分钟再决定 ↗
+                    </a>
+                  </div>
+
                   <div className="border-t border-[#dbe3f4] pt-5 text-center">
                     <button
                       type="button"
@@ -849,12 +835,12 @@ export default function Home() {
         ) : null}
 
         {state.lightDiagnosisGateOpen && state.result ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(19,33,62,0.56)] px-4 py-8">
-            <div className="w-full max-w-md rounded-[28px] border border-[#d8e1f3] bg-white p-6 shadow-[0_24px_60px_rgba(18,35,75,0.24)]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(19,33,62,0.56)] px-4 py-4 md:py-8">
+            <div className="w-full max-w-sm rounded-[26px] border border-[#d8e1f3] bg-white p-5 shadow-[0_24px_60px_rgba(18,35,75,0.24)] md:max-w-md md:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold tracking-[0.12em] text-[#7183a8]">48h 轻诊断付款</p>
-                  <h3 className="mt-2 text-2xl font-semibold text-[#1d2f55]">扫码支付后，加我微信继续推进</h3>
+                  <h3 className="mt-1.5 text-xl font-semibold text-[#1d2f55] md:text-2xl">扫码支付后，加我微信继续推进</h3>
                 </div>
                 <button
                   type="button"
@@ -866,32 +852,32 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="mt-5 overflow-hidden rounded-[24px] border border-[#d9e3f5] bg-[#f7f9fd]">
+              <div className="mt-4 overflow-hidden rounded-2xl border border-[#d9e3f5] bg-[#f7f9fd] p-2">
                 <Image
                   src={ALIPAY_LIGHT_DIAGNOSIS_IMAGE}
                   alt="支付宝收款二维码"
                   width={640}
                   height={853}
-                  className="h-auto w-full"
+                  className="mx-auto h-[290px] w-auto max-w-full object-contain md:h-[340px]"
                 />
               </div>
 
-              <div className="mt-5 rounded-2xl border border-[#dbe4f5] bg-[#fbfcff] p-4">
-                <p className="text-sm leading-7 text-[#51658e]">
+              <div className="mt-4 rounded-2xl border border-[#dbe4f5] bg-[#fbfcff] p-3.5 md:p-4">
+                <p className="text-sm leading-6 text-[#51658e]">
                   付款完成后，添加微信 <span className="font-semibold text-[#1d2f55]">{WECHAT_ID}</span>，并把支付截图和页面链接发我，我会直接在微信里跟你确认和推进。
                 </p>
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
                   <button
                     type="button"
                     onClick={handleCopyWechat}
-                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-[#223567] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#1b2b54]"
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl bg-[#223567] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1b2b54]"
                   >
                     复制微信号
                   </button>
                   <button
                     type="button"
                     onClick={handleCloseLightDiagnosisGate}
-                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-[#d4dcef] bg-white px-5 py-3 text-sm font-semibold text-[#3d517b] transition hover:bg-[#f8fbff]"
+                    className="inline-flex flex-1 items-center justify-center rounded-2xl border border-[#d4dcef] bg-white px-5 py-2.5 text-sm font-semibold text-[#3d517b] transition hover:bg-[#f8fbff]"
                   >
                     我知道了
                   </button>
