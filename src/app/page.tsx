@@ -719,19 +719,32 @@ export default function Home() {
                     </blockquote>
                     <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
                   </a>
-                  <div className="rounded-xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-3 text-sm text-[#394765]">
-                    <p className="text-sm font-semibold text-[#1f355f]">连续 3 个月收入增长</p>
-                    <p className="mt-1 text-xs text-[#66789d]">真实项目数据（项目名称按客户要求保密）</p>
-                    <p className="mt-3 text-[15px] leading-7 text-[#32425f]">
-                      优化转化链路后，月收入连续 3 个月保持增长，最高月环比提升
-                      <span className="font-semibold text-[#0f8a45]"> 152% </span>
-                      ，随后两个月继续增长
-                      <span className="font-semibold text-[#0f8a45]"> 34% </span>
-                      和
-                      <span className="font-semibold text-[#0f8a45]"> 31% </span>
-                      。
+                  <a
+                    href="https://x.com/realcoreychiu/status/2044280334653575214"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => handleClickCase("coreychiu_x_case", 2)}
+                    className="rounded-xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-3 text-sm text-[#394765] transition hover:-translate-y-0.5 hover:border-[#a9cfab] hover:shadow-[0_16px_32px_rgba(49,111,74,0.14)]"
+                  >
+                    <p className="text-sm font-semibold text-[#1f355f]">Corey Chiu · 客户证言</p>
+                    <p className="mt-1 text-xs text-[#66789d]">X 公开反馈</p>
+                    <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                      “专业的事还是得找专业的人来做。推荐大琪老师（@daqi029）的增长诊断服务。”
+                    </blockquote>
+                    <p className="mt-2 text-[15px] leading-7 text-[#32425f]">
+                      该客户网站运营一年多后做到
+                      <span className="font-semibold text-[#0f8a45]"> 3k MRR </span>
+                      ，并表示其中关键转折来自两次增长优化，反馈为“效果非常显著”。
                     </p>
-                  </div>
+                    <Image
+                      src="/corey-chiu-testimonial.jpeg"
+                      alt="Corey Chiu 增长数据截图"
+                      width={1833}
+                      height={876}
+                      className="mt-3 h-auto w-full rounded-lg border border-[#cfe1ce]"
+                    />
+                    <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
+                  </a>
                   <div className="rounded-xl border border-[#ead7e1] bg-[linear-gradient(145deg,#fff7fb_0%,#fff8f3_50%,#fffdf8_100%)] p-3 text-sm text-[#394765]">
                     <p className="text-sm font-semibold text-[#1f355f]">很多项目缺的不是建议，而是优先级判断</p>
                     <p className="mt-1 text-xs text-[#66789d]">服务价值说明</p>
