@@ -643,6 +643,66 @@ export default function Home() {
                     </div>
                   </div>
 
+                  <div className="mx-auto max-w-5xl space-y-6">
+                    <h2 className="text-center text-xl font-semibold text-[#1d4684]">实际案例</h2>
+                    <div className="grid gap-3 md:grid-cols-3">
+                    <a
+                      href="https://x.com/jaredliu_bravo/status/1836239276549546293"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => handleClickCase("jared_x_case", 1)}
+                      className="rounded-xl border-2 border-[#c8d2ef] bg-[linear-gradient(145deg,#faf8ff_0%,#f5f9ff_52%,#fffaf3_100%)] p-4 text-sm text-[#394765] shadow-[0_10px_24px_rgba(45,73,131,0.06)] transition hover:-translate-y-0.5 hover:border-[#9fb3e4] hover:shadow-[0_20px_44px_rgba(45,73,131,0.14)]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#cfd9ef] bg-white text-sm font-semibold text-[#28457c] shadow-[0_10px_22px_rgba(45,73,131,0.1)]">
+                          JL
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1f355f]">Jared Liu</p>
+                          <p className="text-xs text-[#66789d]">AI Reading List 项目 · X 公开反馈</p>
+                        </div>
+                      </div>
+                      <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                        “原来注册转化率只有 <span className="font-semibold text-[#b42828]">10.6%</span>，按 Mengqi 的建议优化后，注册转化提升了近 <span className="font-semibold text-[#0f8a45]">28%</span>。”
+                      </blockquote>
+                      <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
+                    </a>
+                    <a
+                      href="https://x.com/realcoreychiu/status/2044280334653575214"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => handleClickCase("coreychiu_x_case", 2)}
+                      className="rounded-xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-3 text-sm text-[#394765] transition hover:-translate-y-0.5 hover:border-[#a9cfab] hover:shadow-[0_16px_32px_rgba(49,111,74,0.14)]"
+                    >
+                      <p className="text-sm font-semibold text-[#1f355f]">Corey Chiu · 客户证言</p>
+                      <p className="mt-1 text-xs text-[#66789d]">X 公开反馈</p>
+                      <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                        “专业的事还是得找专业的人来做。推荐大琪老师（@daqi029）的增长诊断服务。”
+                      </blockquote>
+                      <p className="mt-2 text-[15px] leading-7 text-[#32425f]">
+                        该客户网站运营一年多后做到
+                        <span className="font-semibold text-[#0f8a45]"> 3k MRR </span>
+                        ，并表示其中关键转折来自两次增长优化，反馈为“效果非常显著”。
+                      </p>
+                      <Image
+                        src="/corey-chiu-testimonial.jpeg"
+                        alt="Corey Chiu 增长数据截图"
+                        width={1833}
+                        height={876}
+                        className="mt-3 h-auto w-full rounded-lg border border-[#cfe1ce]"
+                      />
+                      <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
+                    </a>
+                    <div className="rounded-xl border border-[#ead7e1] bg-[linear-gradient(145deg,#fff7fb_0%,#fff8f3_50%,#fffdf8_100%)] p-3 text-sm text-[#394765]">
+                      <p className="text-sm font-semibold text-[#1f355f]">很多项目缺的不是建议，而是优先级判断</p>
+                      <p className="mt-1 text-xs text-[#66789d]">服务价值说明</p>
+                      <p className="mt-3 text-[15px] leading-7 text-[#32425f]">
+                        真正拖慢改版的，往往不是没人发现问题，而是不知道该先改哪一块最值。这也是人工诊断最有价值的地方。
+                      </p>
+                    </div>
+                    </div>
+                  </div>
+
                   <div className="rounded-[30px] border border-[#d6dff3] bg-[linear-gradient(150deg,#f4f8ff_0%,#f6f9ff_42%,#fefcff_100%)] p-6 shadow-[0_14px_30px_rgba(45,73,131,0.1)] md:p-8">
                     <p className="inline-flex rounded-full bg-[#e7eeff] px-3 py-1 text-xs font-semibold tracking-[0.06em] text-[#3d5f9f]">本周主推方案</p>
                     <h3 className="mt-4 text-[28px] font-semibold leading-tight text-[#1d2f55] md:text-[36px]">
@@ -693,64 +753,6 @@ export default function Home() {
                 </div>
 
                 <div className="mx-auto max-w-5xl space-y-6">
-                  <h2 className="text-center text-xl font-semibold text-[#1d4684]">实际案例</h2>
-                  <div className="grid gap-3 md:grid-cols-3">
-                  <a
-                    href="https://x.com/jaredliu_bravo/status/1836239276549546293"
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => handleClickCase("jared_x_case", 1)}
-                    className="rounded-xl border-2 border-[#c8d2ef] bg-[linear-gradient(145deg,#faf8ff_0%,#f5f9ff_52%,#fffaf3_100%)] p-4 text-sm text-[#394765] shadow-[0_10px_24px_rgba(45,73,131,0.06)] transition hover:-translate-y-0.5 hover:border-[#9fb3e4] hover:shadow-[0_20px_44px_rgba(45,73,131,0.14)]"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#cfd9ef] bg-white text-sm font-semibold text-[#28457c] shadow-[0_10px_22px_rgba(45,73,131,0.1)]">
-                        JL
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#1f355f]">Jared Liu</p>
-                        <p className="text-xs text-[#66789d]">AI Reading List 项目 · X 公开反馈</p>
-                      </div>
-                    </div>
-                    <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
-                      “原来注册转化率只有 <span className="font-semibold text-[#b42828]">10.6%</span>，按 Mengqi 的建议优化后，注册转化提升了近 <span className="font-semibold text-[#0f8a45]">28%</span>。”
-                    </blockquote>
-                    <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
-                  </a>
-                  <a
-                    href="https://x.com/realcoreychiu/status/2044280334653575214"
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => handleClickCase("coreychiu_x_case", 2)}
-                    className="rounded-xl border border-[#d8e4d7] bg-[linear-gradient(145deg,#f7fff7_0%,#f4fbf5_50%,#fbfff9_100%)] p-3 text-sm text-[#394765] transition hover:-translate-y-0.5 hover:border-[#a9cfab] hover:shadow-[0_16px_32px_rgba(49,111,74,0.14)]"
-                  >
-                    <p className="text-sm font-semibold text-[#1f355f]">Corey Chiu · 客户证言</p>
-                    <p className="mt-1 text-xs text-[#66789d]">X 公开反馈</p>
-                    <blockquote className="mt-3 text-[15px] leading-7 text-[#32425f]">
-                      “专业的事还是得找专业的人来做。推荐大琪老师（@daqi029）的增长诊断服务。”
-                    </blockquote>
-                    <p className="mt-2 text-[15px] leading-7 text-[#32425f]">
-                      该客户网站运营一年多后做到
-                      <span className="font-semibold text-[#0f8a45]"> 3k MRR </span>
-                      ，并表示其中关键转折来自两次增长优化，反馈为“效果非常显著”。
-                    </p>
-                    <Image
-                      src="/corey-chiu-testimonial.jpeg"
-                      alt="Corey Chiu 增长数据截图"
-                      width={1833}
-                      height={876}
-                      className="mt-3 h-auto w-full rounded-lg border border-[#cfe1ce]"
-                    />
-                    <p className="mt-4 text-xs font-medium text-[#5e729c]">查看原帖 ↗</p>
-                  </a>
-                  <div className="rounded-xl border border-[#ead7e1] bg-[linear-gradient(145deg,#fff7fb_0%,#fff8f3_50%,#fffdf8_100%)] p-3 text-sm text-[#394765]">
-                    <p className="text-sm font-semibold text-[#1f355f]">很多项目缺的不是建议，而是优先级判断</p>
-                    <p className="mt-1 text-xs text-[#66789d]">服务价值说明</p>
-                    <p className="mt-3 text-[15px] leading-7 text-[#32425f]">
-                      真正拖慢改版的，往往不是没人发现问题，而是不知道该先改哪一块最值。这也是人工诊断最有价值的地方。
-                    </p>
-                  </div>
-                  </div>
-
                   <div className="text-center">
                     <p className="text-sm text-[#6d7ea0]">还不确定是否直接开始？</p>
                     <a
