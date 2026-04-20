@@ -19,10 +19,16 @@ export function buildReportHtml({
   url,
   result,
   wechatId,
+  lightDiagnosisPrice = "$199",
+  paymentMethod = "支付宝扫码",
+  paymentQrImageUrl = "",
 }: {
   url: string;
   result: AnalyzeResult;
   wechatId: string;
+  lightDiagnosisPrice?: string;
+  paymentMethod?: string;
+  paymentQrImageUrl?: string;
 }): string {
   const displayScore = getDisplayScore(result.score);
 
@@ -57,6 +63,11 @@ export function buildReportHtml({
       .cta-block strong { color: #fff; }
       .bullets { margin: 10px 0 0; padding-left: 18px; color: #d6e0ff; }
       .bullets li { margin-top: 6px; }
+      .pay-info { margin-top: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(214, 224, 255, 0.22); background: rgba(255,255,255,0.04); }
+      .pay-info p { margin: 0; font-size: 14px; line-height: 1.8; color: #d6e0ff; }
+      .pay-info p + p { margin-top: 4px; }
+      .pay-qr { margin-top: 12px; border-radius: 14px; border: 1px solid rgba(214, 224, 255, 0.22); overflow: hidden; background: rgba(255,255,255,0.06); }
+      .pay-qr img { display: block; width: 100%; max-width: 320px; height: auto; margin: 0 auto; }
       .contact { margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(214, 224, 255, 0.2); }
       .contact p + p { margin-top: 8px; }
       .contact strong { color: #fff; }
@@ -101,7 +112,13 @@ export function buildReportHtml({
           <p>我会从这 3 个问题里，帮你先挑出最该改的那 1 个，并给你专属修改优先级建议。</p>
         </div>
         <div class="cta-block">
-          <p><strong>48h 轻诊断：</strong>扫码支付后添加微信 <strong>${escapeHtml(wechatId)}</strong>，把支付截图和页面链接发我继续推进。</p>
+          <p><strong>48h 轻诊断：</strong>付款后添加微信 <strong>${escapeHtml(wechatId)}</strong>，把支付截图和页面链接发我继续推进。</p>
+          <div class="pay-info">
+            <p><strong>价格：</strong>${escapeHtml(lightDiagnosisPrice)}</p>
+            <p><strong>支付方式：</strong>${escapeHtml(paymentMethod)}</p>
+            <p><strong>付款后动作：</strong>添加微信并发送「支付截图 + 页面链接」。</p>
+          </div>
+          ${paymentQrImageUrl ? `<div class="pay-qr"><img src="${escapeHtml(paymentQrImageUrl)}" alt="轻诊断支付二维码" /></div>` : ""}
           <ul class="bullets">
             <li>Top 3 完整优先级排序</li>
             <li>关键页面修改方向</li>

@@ -355,10 +355,15 @@ export default function Home() {
       }),
     }).catch(() => undefined);
 
+    const paymentQrImageUrl = `${window.location.origin}${ALIPAY_LIGHT_DIAGNOSIS_IMAGE}`;
+
     const reportHtml = buildReportHtml({
       url: normalizeInputUrl(state.inputUrl),
       result: state.result,
       wechatId: WECHAT_ID,
+      lightDiagnosisPrice: "$199",
+      paymentMethod: "支付宝扫码",
+      paymentQrImageUrl,
     });
 
     const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
