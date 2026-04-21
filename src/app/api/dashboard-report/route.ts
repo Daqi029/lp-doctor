@@ -3,10 +3,12 @@ import { getStoredResult, normalizeUrl } from "@/lib/store";
 import { buildReportHtml } from "@/lib/report";
 
 const WECHAT_ID = "daqi029";
+const ALIPAY_LIGHT_DIAGNOSIS_IMAGE = "/alipay-light-diagnosis.jpg";
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const requestUrl = new URL(request.url);
+    const { searchParams } = requestUrl;
     const userKey = searchParams.get("userKey")?.trim() || "";
     const urlInput = searchParams.get("url")?.trim() || "";
 
@@ -30,6 +32,9 @@ export async function GET(request: Request) {
       url: normalizedUrl,
       result,
       wechatId: WECHAT_ID,
+      lightDiagnosisPrice: "$199",
+      paymentMethod: "支付宝扫码",
+      paymentQrImageUrl: `${requestUrl.origin}${ALIPAY_LIGHT_DIAGNOSIS_IMAGE}`,
     });
 
     return new NextResponse(html, {

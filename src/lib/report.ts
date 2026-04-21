@@ -21,7 +21,7 @@ export function buildReportHtml({
   wechatId,
   lightDiagnosisPrice = "$199",
   paymentMethod = "支付宝扫码",
-  paymentQrImageUrl = "",
+  paymentQrImageUrl = "/alipay-light-diagnosis.jpg",
 }: {
   url: string;
   result: AnalyzeResult;
